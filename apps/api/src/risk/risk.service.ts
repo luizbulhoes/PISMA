@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -24,13 +25,43 @@ export class RiskService {
     const workId = this.workId(user);
     const res = await this.db.query(
       `SELECT a.id, a.type, a.code, a.title, a.activity, a.status, a.created_at,
-              a.current_version_id, v.content_jsonb AS content
+              a.current_version_id, a.created_by,
+              COALESCE(p.full_name, u.username) AS author_name,
+              v.content_jsonb AS content
        FROM risk_analyses a
        LEFT JOIN risk_analysis_versions v ON v.id = a.current_version_id
+       LEFT JOIN users u ON u.id = a.created_by
+       LEFT JOIN user_profiles p ON p.user_id = u.id
        WHERE a.work_id = $1 ORDER BY a.created_at DESC`,
       [workId],
     );
-    return { items: res.rows };
+    const ids = res.rows.map((r) => r.id as string);
+    const approvals = ids.length
+      ? (
+          await this.db.query(
+            `SELECT a.*, COALESCE(p.full_name, u.username) AS signer_name
+             FROM risk_analysis_approvals a
+             JOIN users u ON u.id = a.signer_user_id
+             LEFT JOIN user_profiles p ON p.user_id = u.id
+             WHERE a.risk_analysis_id = ANY($1::uuid[])
+             ORDER BY a.signed_at`,
+            [ids],
+          )
+        ).rows
+      : [];
+    const byApr = new Map<string, typeof approvals>();
+    for (const row of approvals) {
+      const key = String(row.risk_analysis_id);
+      const list = byApr.get(key) ?? [];
+      list.push(row);
+      byApr.set(key, list);
+    }
+    return {
+      items: res.rows.map((row) => ({
+        ...row,
+        approvals: byApr.get(String(row.id)) ?? [],
+      })),
+    };
   }
 
   async createAnalysis(
@@ -56,7 +87,7 @@ export class RiskService {
     const analysis = await this.db.query(
       `INSERT INTO risk_analyses
         (work_id, type, code, title, activity, area_id, process_id, created_by, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'DRAFT') RETURNING *`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'SUBMITTED') RETURNING *`,
       [
         workId,
         input.type,
@@ -102,7 +133,29 @@ export class RiskService {
       `SELECT * FROM risk_analysis_versions WHERE risk_analysis_id = $1 ORDER BY version_number`,
       [id],
     );
-    return { ...res.rows[0], versions: versions.rows };
+    const author = await this.db.query<{ author_name: string }>(
+      `SELECT COALESCE(p.full_name, u.username) AS author_name
+       FROM users u
+       LEFT JOIN user_profiles p ON p.user_id = u.id
+       WHERE u.id = $1`,
+      [res.rows[0].created_by],
+    );
+    const approvals = await this.db.query(
+      `SELECT a.*, COALESCE(p.full_name, u.username) AS signer_name
+       FROM risk_analysis_approvals a
+       JOIN users u ON u.id = a.signer_user_id
+       LEFT JOIN user_profiles p ON p.user_id = u.id
+       WHERE a.risk_analysis_id = $1 ORDER BY a.signed_at`,
+      [id],
+    );
+    const current = versions.rows.find((v) => v.id === res.rows[0].current_version_id);
+    return {
+      ...res.rows[0],
+      author_name: author.rows[0]?.author_name ?? null,
+      content: current?.content_jsonb ?? {},
+      versions: versions.rows,
+      approvals: approvals.rows,
+    };
   }
 
   async deriveApr(user: AuthUser, id: string) {
@@ -207,6 +260,40 @@ export class RiskService {
       throw new ForbiddenException('Somente Técnico assina slot de técnico');
     }
     const analysis = await this.getAnalysis(user, id);
+    const content = (analysis.content as Record<string, unknown>) ?? {};
+    const designated = Array.isArray(content.technicianApproverIds)
+      ? (content.technicianApproverIds as string[])
+      : [];
+    const existingApprovals = (analysis.approvals as Array<{
+      slot: string;
+      signer_user_id: string;
+    }>) ?? [];
+
+    let resolvedSlot = slot;
+    if (user.role === 'TECHNICIAN') {
+      if (existingApprovals.some((a) => a.signer_user_id === user.userId)) {
+        throw new BadRequestException('Você já assinou esta APR');
+      }
+      const idx = designated.findIndex((uid) => uid === user.userId);
+      if (idx >= 0) {
+        resolvedSlot = `TECHNICIAN_${idx + 1}`;
+      } else {
+        const used = new Set(existingApprovals.map((a) => a.slot));
+        const reserved = new Set(designated.map((_, i) => `TECHNICIAN_${i + 1}`));
+        const free = [1, 2, 3, 4].find((n) => {
+          const s = `TECHNICIAN_${n}`;
+          return !used.has(s) && !reserved.has(s);
+        });
+        if (!free) {
+          throw new BadRequestException('Não há mais vagas de assinatura de técnico nesta APR');
+        }
+        resolvedSlot = `TECHNICIAN_${free}`;
+      }
+    } else if (['MANAGER', 'MASTER'].includes(user.role ?? '')) {
+      resolvedSlot = 'MANAGER';
+    }
+    slot = resolvedSlot;
+
     const { verifyPin } = await import('@pisma/security');
     const cred = await this.db.query<{ id: string; pin_hash: string }>(
       `SELECT id, pin_hash FROM signature_credentials
@@ -225,7 +312,7 @@ export class RiskService {
       if (!pinOk) throw new ForbiddenException('PIN inválido');
     }
     const hash = createHash('sha256')
-      .update(JSON.stringify(analysis.versions?.at?.(-1)?.content_jsonb ?? id))
+      .update(JSON.stringify(content ?? id))
       .digest('hex');
     await this.db.query(
       `INSERT INTO risk_analysis_approvals
@@ -239,28 +326,57 @@ export class RiskService {
              signed_at = NOW()`,
       [id, slot, user.userId, decision, cred.rows[0].id, hash],
     );
-    const approvals = await this.db.query(
-      `SELECT slot, decision FROM risk_analysis_approvals WHERE risk_analysis_id = $1`,
+    const approvals = await this.db.query<{
+      slot: string;
+      decision: string;
+      signer_user_id: string;
+    }>(
+      `SELECT slot, decision, signer_user_id FROM risk_analysis_approvals WHERE risk_analysis_id = $1`,
       [id],
     );
-    const managerOk = approvals.rows.some(
-      (a) => a.slot === 'MANAGER' && a.decision === 'APPROVED',
-    );
-    if (managerOk && decision === 'APPROVED') {
+    let nextStatus = analysis.status as string;
+    if (approvals.rows.some((a) => a.decision === 'REJECTED')) {
+      nextStatus = 'REJECTED';
+    } else {
+      const techApproved = approvals.rows.filter(
+        (a) => a.slot.startsWith('TECHNICIAN') && a.decision === 'APPROVED',
+      );
+      const designatedDone =
+        designated.length > 0
+          ? designated.every((uid) =>
+              approvals.rows.some(
+                (a) => a.signer_user_id === uid && a.decision === 'APPROVED',
+              ),
+            )
+          : techApproved.length >= 1;
+      if (designatedDone) nextStatus = 'APPROVED';
+      else if (techApproved.length > 0 || approvals.rows.some((a) => a.slot === 'MANAGER')) {
+        nextStatus = 'PARTIALLY_APPROVED';
+      } else {
+        nextStatus = 'SUBMITTED';
+      }
+    }
+    if (nextStatus === 'APPROVED') {
       await this.db.query(
         `UPDATE risk_analysis_versions SET approved_by = $1, approved_at = NOW()
          WHERE id = $2`,
         [user.userId, analysis.current_version_id],
       );
-      await this.db.query(
-        `UPDATE risk_analyses SET status = 'APPROVED', updated_at = NOW() WHERE id = $1`,
-        [id],
-      );
     }
-    return {
-      items: approvals.rows,
-      status: managerOk && decision === 'APPROVED' ? 'APPROVED' : analysis.status,
-    };
+    await this.db.query(
+      `UPDATE risk_analyses SET status = $1, updated_at = NOW() WHERE id = $2`,
+      [nextStatus, id],
+    );
+    await this.audit.append({
+      workId: this.workId(user),
+      userId: user.userId,
+      entityType: 'risk_analysis',
+      entityId: id,
+      action: `APR_${decision}_${slot}`,
+      outcome: 'SUCCESS',
+      payload: { slot, decision, nextStatus },
+    });
+    return this.getAnalysis(user, id);
   }
 
   async listApprovals(user: AuthUser, id: string) {

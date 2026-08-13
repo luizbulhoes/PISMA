@@ -36,6 +36,14 @@ function applicableNatureLabels(content: Record<string, unknown>): string[] {
     .map(([k]) => ACTIVITY_NATURES.find((n) => n.code === k)?.label ?? k);
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function approvalsOf(apr: Apr): Apr[] {
+  return Array.isArray(apr.approvals) ? (apr.approvals as Apr[]) : [];
+}
+
 function AprItems({ title, items }: { title: string; items: string[] }) {
   return (
     <div className="apr-panel">
@@ -106,6 +114,14 @@ export function AprPage() {
     fieldOf(selectedContent, 'area') !== '—'
       ? fieldOf(selectedContent, 'area')
       : fieldOf(selected ?? {}, 'area', 'location');
+  const selectedApprovals = selected ? approvalsOf(selected) : [];
+  const alreadySigned = selectedApprovals.some(
+    (a) => fieldOf(a, 'signer_user_id') === (user?.id ?? ''),
+  );
+  const designatedIds = Array.isArray(selectedContent.technicianApproverIds)
+    ? (selectedContent.technicianApproverIds as string[])
+    : [];
+  const statusClosed = ['APPROVED', 'REJECTED'].includes(fieldOf(selected ?? {}, 'status'));
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -143,6 +159,7 @@ export function AprPage() {
 
   async function decideApr(aprId: string, decision: 'APPROVED' | 'REJECTED') {
     try {
+      setError(null);
       const slot = isTechnician ? 'TECHNICIAN_1' : 'MANAGER';
       await api(`/apr/${aprId}/approvals`, {
         method: 'POST',
@@ -155,12 +172,20 @@ export function AprPage() {
       });
       setMsg(
         decision === 'APPROVED'
-          ? 'APR aprovada com assinatura digital'
+          ? 'Assinatura digital registrada nesta APR'
           : 'APR reprovada com registro de assinatura',
       );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha na decisão da APR');
+      let message = err instanceof Error ? err.message : 'Falha na decisão da APR';
+      try {
+        const parsed = JSON.parse(message) as { message?: string | string[] };
+        if (typeof parsed.message === 'string') message = parsed.message;
+        else if (Array.isArray(parsed.message)) message = parsed.message.join(' ');
+      } catch {
+        /* texto simples */
+      }
+      setError(message);
     }
   }
 
@@ -173,23 +198,36 @@ export function AprPage() {
     const applicable = applicableNatureLabels(content).join(', ');
     const hazards = listFromContent(content.hazards);
     const controls = listFromContent(content.controls);
-    const listHtml = (items: string[]) =>
-      items.length === 0
+    const author = fieldOf(apr, 'author_name');
+    const signatures = approvalsOf(apr);
+    const listHtml = (rows: string[]) =>
+      rows.length === 0
         ? '<p class="muted">Nenhum item informado.</p>'
-        : `<ul>${items
-            .map((i) => `<li>${i.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`)
+        : `<ul>${rows.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`;
+    const signaturesHtml =
+      signatures.length === 0
+        ? '<p>Não há assinaturas registradas nesta APR.</p>'
+        : `<ul>${signatures
+            .map((s) => {
+              const who = escapeHtml(fieldOf(s, 'signer_name'));
+              const slot = escapeHtml(roleLabel(fieldOf(s, 'slot')));
+              const decision = escapeHtml(displayLabel(fieldOf(s, 'decision')));
+              const when = escapeHtml(fieldOf(s, 'signed_at'));
+              return `<li><b>${who}</b> — ${slot} · ${decision} · ${when}</li>`;
+            })
             .join('')}</ul>`;
-    w.document.write(`<!doctype html><html lang="pt-BR"><head><title>APR ${fieldOf(apr, 'title')}</title>
+    w.document.write(`<!doctype html><html lang="pt-BR"><head><title>APR ${escapeHtml(fieldOf(apr, 'title'))}</title>
       <style>body{font-family:Segoe UI,sans-serif;padding:24px;color:#0d3b2e;max-width:720px;margin:0 auto}
       h1{margin:0 0 8px}.muted{color:#5a6f67}.box{border:1px solid #dce8e2;padding:14px 16px;border-radius:10px;margin-top:12px}
       ul{margin:8px 0 0;padding-left:18px} li{margin:6px 0}</style>
       </head><body>
-      <h1>APR — ${fieldOf(apr, 'title')}</h1>
-      <div class="muted">Atividade: ${fieldOf(apr, 'activity')} · Situação: ${displayLabel(fieldOf(apr, 'status'))}</div>
-      <div class="box"><b>Naturezas aplicáveis</b><div>${applicable || '—'}</div></div>
+      <h1>APR — ${escapeHtml(fieldOf(apr, 'title'))}</h1>
+      <div class="muted">Atividade: ${escapeHtml(fieldOf(apr, 'activity'))} · Situação: ${escapeHtml(displayLabel(fieldOf(apr, 'status')))}</div>
+      <div class="box"><b>Elaborado por</b><div>${escapeHtml(author)}</div></div>
+      <div class="box"><b>Naturezas aplicáveis</b><div>${escapeHtml(applicable || '—')}</div></div>
       <div class="box"><b>Perigos</b>${listHtml(hazards)}</div>
       <div class="box"><b>Controles</b>${listHtml(controls)}</div>
-      <div class="box"><b>Assinaturas digitais</b><div class="muted">Registradas no sistema com credencial do usuário, data/hora e trilha de auditoria.</div></div>
+      <div class="box"><b>Assinaturas digitais</b>${signaturesHtml}</div>
       <script>window.print()</script></body></html>`);
     w.document.close();
   }
@@ -393,6 +431,9 @@ export function AprPage() {
                 {fieldOf(selected, 'activity')}
                 {fieldOf(selected, 'area') !== '—' ? ` · ${fieldOf(selected, 'area')}` : ''}
               </p>
+              <p className="muted" style={{ margin: '6px 0 0' }}>
+                Elaborado por <b style={{ color: 'inherit' }}>{fieldOf(selected, 'author_name')}</b>
+              </p>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <span className="badge">{displayLabel(fieldOf(selected, 'status'))}</span>
@@ -426,7 +467,43 @@ export function AprPage() {
             <AprItems title="Controles" items={listFromContent(selectedContent.controls)} />
           </div>
 
-          {isTechnician ? (
+          <div className="apr-panel" style={{ marginBottom: 16 }}>
+            <h4>Assinaturas digitais</h4>
+            {selectedApprovals.length === 0 ? (
+              <p className="muted" style={{ margin: 0 }}>
+                Não há assinaturas registradas nesta APR.
+              </p>
+            ) : (
+              <ul className="apr-list">
+                {selectedApprovals.map((s) => (
+                  <li key={fieldOf(s, 'id', 'slot')}>
+                    <b>{fieldOf(s, 'signer_name')}</b> — {roleLabel(fieldOf(s, 'slot'))} ·{' '}
+                    {displayLabel(fieldOf(s, 'decision'))} · {fieldOf(s, 'signed_at')}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {designatedIds.length > 0 ? (
+              <p className="muted" style={{ margin: '10px 0 0' }}>
+                Técnicos convidados:{' '}
+                {designatedIds
+                  .map((id) => {
+                    const signed = selectedApprovals.some((s) => fieldOf(s, 'signer_user_id') === id);
+                    const name =
+                      fieldOf(
+                        technicians.find((t) => fieldOf(t, 'id') === id) ?? {},
+                        'full_name',
+                        'fullName',
+                        'name',
+                      ) || id.slice(0, 8);
+                    return `${name}${signed ? ' (assinou)' : ' (pendente)'}`;
+                  })
+                  .join(' · ')}
+              </p>
+            ) : null}
+          </div>
+
+          {isTechnician && !alreadySigned && !statusClosed ? (
             <div className="signature-box">
               <p style={{ marginTop: 0 }}>
                 Após ler a APR, registre sua decisão com a <b>assinatura digital</b> da sua conta
@@ -446,18 +523,15 @@ export function AprPage() {
                 >
                   Reprovar
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => void printApr(fieldOf(selected, 'id'))}
-                >
-                  Imprimir APR PDF
-                </button>
               </div>
             </div>
           ) : null}
 
-          {['MANAGER', 'MASTER'].includes(user?.role ?? '') ? (
+          {isTechnician && alreadySigned ? (
+            <p className="muted">Sua assinatura digital já está nesta APR.</p>
+          ) : null}
+
+          {['MANAGER', 'MASTER'].includes(user?.role ?? '') && !alreadySigned && !statusClosed ? (
             <div className="signature-box" style={{ marginTop: 12 }}>
               <label className="muted">PIN do Gestor</label>
               <input
@@ -473,18 +547,11 @@ export function AprPage() {
                 >
                   Aprovar como {roleLabel('MANAGER')}
                 </CriticalActionButton>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => void printApr(fieldOf(selected, 'id'))}
-                >
-                  Imprimir APR PDF
-                </button>
               </div>
             </div>
           ) : null}
 
-          {!isTechnician && !['MANAGER', 'MASTER'].includes(user?.role ?? '') ? (
+          <div style={{ marginTop: 12 }}>
             <button
               type="button"
               className="btn btn-ghost"
@@ -492,7 +559,7 @@ export function AprPage() {
             >
               Imprimir APR PDF
             </button>
-          ) : null}
+          </div>
         </div>
       ) : null}
 

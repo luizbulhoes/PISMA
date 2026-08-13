@@ -4,7 +4,7 @@
 **Versão:** 1.3  
 **Repositório canônico:** https://github.com/luizbulhoes/PISMA  
 **Fonte de requisitos:** `PISMA_IA_Development_Package_v1.3_CONSOLIDADO/01_CANONICAL_SPEC/PISMA_PRD_v1.3.md`  
-**Última atualização deste arquivo:** 2026-08-13 (leitura da APR sem JSON)
+**Última atualização deste arquivo:** 2026-08-13 (APR assinatura e PDF com autor)
 
 ---
 
@@ -20,6 +20,16 @@ Manter **sempre** o remoto `origin/main` alinhado ao trabalho local:
 Remote: `https://github.com/luizbulhoes/PISMA.git`
 
 ---
+
+### 2026-08-13 — APR: assinatura dos usuários da atividade e PDF com autor
+
+**Tipo:** correção · **Status:** feito · **Git:** (push `main`)
+
+- Assinar APR agora registra a assinatura, atualiza a situação (parcialmente aprovada / aprovada) e exibe quem assinou.
+- Cada técnico recebe um slot próprio; o emissor da APR aparece como autor.
+- PDF da APR traz **Elaborado por** (sempre) e a lista de assinaturas; se ninguém assinou, informa que não há assinaturas.
+
+**Por quê:** a APR só evolui quando os usuários da atividade assinam; o documento impresso precisa identificar o autor e as assinaturas digitais.
 
 ### 2026-08-13 — Leitura da APR em layout amigável
 
