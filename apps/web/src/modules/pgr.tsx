@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel } from '../labels';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
 type Risk = Record<string, unknown>;
@@ -157,7 +158,7 @@ export function PgrPage() {
                   </td>
                   <td>{fieldOf(r, 'controls')}</td>
                   <td>
-                    <span className="badge">{fieldOf(r, 'residual', 'residual_risk')}</span>
+                    <span className="badge">{displayLabel(fieldOf(r, 'residual', 'residual_risk'))}</span>
                   </td>
                 </tr>
               ))

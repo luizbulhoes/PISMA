@@ -4,7 +4,7 @@
 **Versão:** 1.3  
 **Repositório canônico:** https://github.com/luizbulhoes/PISMA  
 **Fonte de requisitos:** `PISMA_IA_Development_Package_v1.3_CONSOLIDADO/01_CANONICAL_SPEC/PISMA_PRD_v1.3.md`  
-**Última atualização deste arquivo:** 2026-08-13 (melhorias Perfil Técnico / UX SSTA)
+**Última atualização deste arquivo:** 2026-08-13 (PT técnicos envolvidos + pt-BR na UI)
 
 ---
 
@@ -20,6 +20,16 @@ Manter **sempre** o remoto `origin/main` alinhado ao trabalho local:
 Remote: `https://github.com/luizbulhoes/PISMA.git`
 
 ---
+
+### 2026-08-13 — Técnicos envolvidos na PT + interface em português
+
+**Tipo:** melhoria de produto · **Status:** feito · **Git:** (push `main`)
+
+- Removido o texto instrutivo das naturezas na emissão da PT (“Selecione a aplicabilidade…”).
+- “Novo colaborador” substituído por **Técnicos envolvidos**: inclusão via modal “Novo técnico envolvido na atividade” (lista da Obra, quantos forem necessários) e exclusão via modal “Remover técnico da atividade”.
+- Linguagem padrão da UI em **português do Brasil**: papéis, situações (rascunho/aprovada/etc.), sincronização, bloqueios, ocorrências, PAC, Audicamp e demais códigos internos passam por `displayLabel` / `roleLabel`.
+
+**Por quê:** o fluxo de equipe da PT é de técnicos da Obra, não de “colaborador” genérico; o operador de campo não deve ver códigos em inglês.
 
 ### 2026-08-13 — Melhorias Perfil Técnico / UX SSTA (lote operacional)
 

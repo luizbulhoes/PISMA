@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel } from '../labels';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
 type Doc = Record<string, unknown>;
@@ -114,7 +115,7 @@ export function DocumentsPage() {
               <th align="left">Código</th>
               <th align="left">Título</th>
               <th align="left">Rev.</th>
-              <th align="left">Status</th>
+              <th align="left">Situação</th>
             </tr>
           </thead>
           <tbody>
@@ -133,7 +134,7 @@ export function DocumentsPage() {
                   <td>{fieldOf(d, 'title', 'name')}</td>
                   <td>{fieldOf(d, 'revision', 'current_revision', 'rev')}</td>
                   <td>
-                    <span className="badge">{fieldOf(d, 'status', 'state')}</span>
+                    <span className="badge">{displayLabel(fieldOf(d, 'status', 'state'))}</span>
                   </td>
                 </tr>
               ))

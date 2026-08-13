@@ -54,7 +54,7 @@ export function CriticalActionButton({
       disabled={disabled || blocked}
       title={blocked ? 'Reconecte à rede para assinar ou aprovar.' : title}
     >
-      {blocked ? 'Offline — ação bloqueada' : children}
+      {blocked ? 'Sem conexão — ação bloqueada' : children}
     </button>
   );
 }

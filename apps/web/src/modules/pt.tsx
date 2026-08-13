@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
-import { ACTIVITY_NATURES, defaultNaturesMap, roleLabel, type NatureFill } from '../labels';
+import { ACTIVITY_NATURES, defaultNaturesMap, displayLabel, roleLabel, type NatureFill } from '../labels';
 import {
   GENERAL_PRECAUTIONS,
   NATURE_MODULES,
@@ -112,7 +112,7 @@ export function PtsPage() {
               <th align="left">Nº / OS</th>
               <th align="left">Descrição</th>
               <th align="left">Naturezas</th>
-              <th align="left">Status</th>
+              <th align="left">Situação</th>
               <th align="left">Data</th>
               <th />
             </tr>
@@ -149,7 +149,7 @@ export function PtsPage() {
                         : fieldOf(pt, 'nature', 'activity_nature') || '—'}
                     </td>
                     <td>
-                      <span className="badge">{fieldOf(pt, 'status')}</span>
+                      <span className="badge">{displayLabel(fieldOf(pt, 'status'))}</span>
                     </td>
                     <td>{fieldOf(pt, 'workDate', 'work_date', 'created_at')}</td>
                     <td>
@@ -193,6 +193,9 @@ export function PtNewPage() {
     teamUserIds: [] as string[],
     authorizeSignature: false,
   });
+  const [addTechOpen, setAddTechOpen] = useState(false);
+  const [addTechId, setAddTechId] = useState('');
+  const [removeTechId, setRemoveTechId] = useState<string | null>(null);
 
   useEffect(() => {
     void api<unknown>('/equipment', { token })
@@ -330,7 +333,7 @@ export function PtNewPage() {
     'APR, local e OS',
     'Naturezas',
     'Riscos e precauções',
-    'Equipe e assinatura',
+    'Técnicos envolvidos e assinatura',
     'Revisar',
   ];
   const applicable = ACTIVITY_NATURES.filter((n) => form.natures[n.code] === 'APPLICABLE');
@@ -362,7 +365,7 @@ export function PtNewPage() {
               <option value="">Sem APR vinculada nesta etapa</option>
               {aprs.map((a) => (
                 <option key={fieldOf(a, 'id')} value={fieldOf(a, 'id')}>
-                  {fieldOf(a, 'title', 'name')} — {fieldOf(a, 'status')}
+                  {fieldOf(a, 'title', 'name')} — {displayLabel(fieldOf(a, 'status'))}
                 </option>
               ))}
             </select>
@@ -407,11 +410,6 @@ export function PtNewPage() {
 
         {step === 1 ? (
           <>
-            <p>
-              Selecione a aplicabilidade de cada natureza (FS 13-01). Em{' '}
-              <b>Não aplicável</b>, o checklist fica oculto. Em <b>Aplicável</b>, abrem-se as
-              marcações Sim / Não / N/A.
-            </p>
             <div className="nature-grid">
               {ACTIVITY_NATURES.map((n) => {
                 const locked = lockedNatures.includes(n.code);
@@ -551,31 +549,59 @@ export function PtNewPage() {
 
         {step === 3 ? (
           <>
-            <b>Incluir técnicos na atividade</b>
+            <b>Técnicos envolvidos</b>
             <p className="muted">
-              Os técnicos incluídos receberão a PT, poderão visualizá-la sem alterar, farão check-in
-              e assinarão confirmando participação.
+              Os técnicos envolvidos recebem a PT, visualizam sem alterar, fazem check-in e
+              assinam a participação.
             </p>
-            <div style={{ marginTop: 8 }}>
-              {technicians.filter((t) => fieldOf(t, 'id') !== user.id).length === 0 ? (
-                <p className="muted">Nenhum outro técnico disponível nesta Obra.</p>
+            <div style={{ marginTop: 10 }}>
+              {form.teamUserIds.length === 0 ? (
+                <p className="muted">Nenhum técnico envolvido além do emissor.</p>
               ) : (
                 technicians
-                  .filter((t) => fieldOf(t, 'id') !== user.id)
+                  .filter((t) => form.teamUserIds.includes(fieldOf(t, 'id')))
                   .map((t) => {
                     const id = fieldOf(t, 'id');
                     return (
-                      <label key={id} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                        <input
-                          type="checkbox"
-                          checked={form.teamUserIds.includes(id)}
-                          onChange={() => toggleTeam(id)}
-                        />
-                        {fieldOf(t, 'full_name', 'fullName', 'name')}
-                      </label>
+                      <div
+                        key={id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          alignItems: 'center',
+                          padding: '8px 0',
+                          borderBottom: '1px solid #dce8e2',
+                        }}
+                      >
+                        <span>{fieldOf(t, 'full_name', 'fullName', 'name')}</span>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => setRemoveTechId(id)}
+                        >
+                          Remover técnico da atividade
+                        </button>
+                      </div>
                     );
                   })
               )}
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  const first = technicians.find(
+                    (t) =>
+                      fieldOf(t, 'id') !== user.id && !form.teamUserIds.includes(fieldOf(t, 'id')),
+                  );
+                  setAddTechId(first ? fieldOf(first, 'id') : '');
+                  setAddTechOpen(true);
+                }}
+              >
+                Novo técnico envolvido na atividade
+              </button>
             </div>
             <div className="signature-box" style={{ marginTop: 16 }}>
               <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -616,7 +642,7 @@ export function PtNewPage() {
               {applicable.map((n) => n.label).join(', ') || 'nenhuma'}
             </p>
             <p>
-              <b>Técnicos incluídos:</b>{' '}
+              <b>Técnicos envolvidos:</b>{' '}
               {form.teamUserIds.length === 0
                 ? 'nenhum'
                 : technicians
@@ -631,7 +657,7 @@ export function PtNewPage() {
               <b>Observação</b>
               <p className="muted" style={{ marginBottom: 0 }}>
                 Ao criar e submeter, a PT seguirá para análise e aprovação. TST e
-                Supervisor/Gestor assinarão na aprovação. Os técnicos incluídos farão check-in e
+                Supervisor/Gestor assinarão na aprovação. Os técnicos envolvidos farão check-in e
                 assinarão a participação após a autorização.
               </p>
             </div>
@@ -657,6 +683,84 @@ export function PtNewPage() {
           )}
         </div>
       </form>
+
+      {addTechOpen ? (
+        <div className="modal-backdrop" onClick={() => setAddTechOpen(false)}>
+          <div className="card modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>Novo técnico envolvido na atividade</h3>
+            <p className="muted">Selecione o técnico na lista da Obra.</p>
+            <select
+              className="field"
+              value={addTechId}
+              onChange={(e) => setAddTechId(e.target.value)}
+            >
+              <option value="">Selecione…</option>
+              {technicians
+                .filter(
+                  (t) =>
+                    fieldOf(t, 'id') !== user.id && !form.teamUserIds.includes(fieldOf(t, 'id')),
+                )
+                .map((t) => (
+                  <option key={fieldOf(t, 'id')} value={fieldOf(t, 'id')}>
+                    {fieldOf(t, 'full_name', 'fullName', 'name')}
+                  </option>
+                ))}
+            </select>
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button type="button" className="btn btn-ghost" onClick={() => setAddTechOpen(false)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!addTechId}
+                onClick={() => {
+                  toggleTeam(addTechId);
+                  setAddTechOpen(false);
+                  setAddTechId('');
+                }}
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {removeTechId ? (
+        <div className="modal-backdrop" onClick={() => setRemoveTechId(null)}>
+          <div className="card modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>Remover técnico da atividade</h3>
+            <p>
+              Remover{' '}
+              <b>
+                {fieldOf(
+                  technicians.find((t) => fieldOf(t, 'id') === removeTechId) ?? {},
+                  'full_name',
+                  'fullName',
+                  'name',
+                )}
+              </b>{' '}
+              da PT?
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button type="button" className="btn btn-ghost" onClick={() => setRemoveTechId(null)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  toggleTeam(removeTechId);
+                  setRemoveTechId(null);
+                }}
+              >
+                Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -793,8 +897,8 @@ export function PtDetailPage() {
 
       <div className="kpis">
         <div className="card kpi">
-          <label>Status</label>
-          <b style={{ fontSize: 18 }}>{fieldOf(pt ?? {}, 'status')}</b>
+          <label>Situação</label>
+          <b style={{ fontSize: 18 }}>{displayLabel(fieldOf(pt ?? {}, 'status'))}</b>
         </div>
         <div className="card kpi">
           <label>OS</label>
@@ -891,7 +995,7 @@ export function PtDetailPage() {
                   <b>Slot {roleLabel(slot)}</b>
                   <div className="muted" style={{ margin: '6px 0' }}>
                     {existing
-                      ? `${fieldOf(existing, 'decision', 'status')} — ${fieldOf(existing, 'signer_name')} — ${fieldOf(existing, 'signed_at', 'decided_at')}`
+                      ? `${displayLabel(fieldOf(existing, 'decision', 'status'))} — ${fieldOf(existing, 'signer_name')} — ${fieldOf(existing, 'signed_at', 'decided_at')}`
                       : 'Pendente'}
                   </div>
                   {canAct && !existing ? (

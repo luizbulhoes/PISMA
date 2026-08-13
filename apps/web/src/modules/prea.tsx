@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel } from '../labels';
 import { CriticalActionButton } from '../offline';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
@@ -262,7 +263,7 @@ export function PreaPage() {
             const id = fieldOf(p, 'id');
             return (
               <div key={id} style={{ borderTop: '1px solid #dce8e2', padding: '12px 0' }}>
-                <b>{fieldOf(p, 'title')}</b> <span className="badge">{fieldOf(p, 'status')}</span>
+                <b>{fieldOf(p, 'title')}</b> <span className="badge">{displayLabel(fieldOf(p, 'status'))}</span>
                 <div className="muted">{fieldOf(p, 'location')}</div>
                 <div>{fieldOf(p, 'description')}</div>
                 {canApprove ? (

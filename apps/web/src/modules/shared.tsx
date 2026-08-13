@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { displayLabel } from '../labels';
 
 export function Err({ error }: { error: string | null }) {
   if (!error) return null;
@@ -46,4 +47,8 @@ export function fieldOf(row: Record<string, unknown>, ...keys: string[]): string
     if (v != null && v !== '') return String(v);
   }
   return '—';
+}
+
+export function labeledField(row: Record<string, unknown>, ...keys: string[]): string {
+  return displayLabel(fieldOf(row, ...keys));
 }

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel } from '../labels';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
 type Row = Record<string, unknown>;
@@ -97,7 +98,7 @@ export function AudicampPage() {
           ? 'PAC gerado a partir da triagem'
           : action === 'ESCALAR_RQA'
             ? 'Escalado / risco iminente'
-            : `Triagem: ${action}`,
+            : `Triagem: ${displayLabel(action)}`,
       );
       await load();
     } catch (err) {
@@ -182,9 +183,9 @@ export function AudicampPage() {
                 }}
               >
                 <div>
-                  <span className="badge">{fieldOf(it, 'record_type', 'type')}</span>{' '}
+                  <span className="badge">{displayLabel(fieldOf(it, 'record_type', 'type'))}</span>{' '}
                   <span className="badge">Cat. {fieldOf(it, 'category_code', 'category')}</span>{' '}
-                  <span className="muted">{fieldOf(it, 'triage_status', 'status')}</span>
+                  <span className="muted">{displayLabel(fieldOf(it, 'triage_status', 'status'))}</span>
                 </div>
                 <div>
                   <b>{fieldOf(it, 'area', 'location')}</b> — {fieldOf(it, 'description')}

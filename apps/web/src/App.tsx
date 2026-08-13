@@ -2,7 +2,7 @@ import { FormEvent, useState, useEffect } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
 import { api } from './api';
-import { roleLabel } from './labels';
+import { displayLabel, roleLabel } from './labels';
 import { FirstAccessPage } from './FirstAccessPage';
 import {
   CompetencyPage,
@@ -137,7 +137,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 /** Mural é a tela inicial de todos os papéis. */
 function menuForRole(role: string) {
   const mural = { to: '/', label: 'Mural' };
-  const sync = { to: '/sync', label: 'Sync' };
+  const sync = { to: '/sync', label: 'Sincronização' };
   const resumo = { to: '/resumo', label: 'Resumo' };
 
   if (role === 'TECHNICIAN') {
@@ -251,7 +251,7 @@ function NoticesPage() {
           items.map((n) => (
             <div key={n.id} style={{ marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid #dce8e2' }}>
               <b>
-                [{n.severity}] {n.title}
+                [{displayLabel(n.severity)}] {n.title}
               </b>
               <div className="muted">{n.body}</div>
             </div>
@@ -306,7 +306,7 @@ function AuditPage() {
                 <td>
                   {String(e.entity_type)} {e.entity_id ? `#${String(e.entity_id).slice(0, 8)}` : ''}
                 </td>
-                <td>{String(e.outcome)}</td>
+                <td>{displayLabel(String(e.outcome))}</td>
                 <td>{String(e.created_at)}</td>
               </tr>
             ))}
@@ -322,7 +322,7 @@ function WorksPlaceholder() {
     <>
       <h1>Obras / Contratos</h1>
       <div className="card">
-        <p className="muted">Cadastro avançado de Obras — evolução da Onda 1 (Master).</p>
+        <p className="muted">Cadastro avançado de Obras — em evolução (Master).</p>
       </div>
     </>
   );

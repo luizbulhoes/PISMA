@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel } from '../labels';
 import { CriticalActionButton } from '../offline';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
@@ -161,7 +162,7 @@ export function WastePage() {
               <th align="left">Tipo</th>
               <th align="left">Peso</th>
               <th align="left">Local</th>
-              <th align="left">Status</th>
+              <th align="left">Situação</th>
             </tr>
           </thead>
           <tbody>
@@ -194,7 +195,7 @@ export function WastePage() {
                     <td>{fieldOf(l, 'quantity', 'weightKg', 'weight_kg')} kg</td>
                     <td>{fieldOf(l, 'storage_location', 'location')}</td>
                     <td>
-                      <span className="badge">{fieldOf(l, 'status')}</span>
+                      <span className="badge">{displayLabel(fieldOf(l, 'status'))}</span>
                     </td>
                   </tr>
                 );
@@ -228,7 +229,7 @@ export function WastePage() {
           requests.map((r) => (
             <div key={fieldOf(r, 'id')} style={{ borderTop: '1px solid #dce8e2', padding: '10px 0' }}>
               <b>Pedido {fieldOf(r, 'id').slice(0, 8)}</b>{' '}
-              <span className="badge">{fieldOf(r, 'status')}</span>
+              <span className="badge">{displayLabel(fieldOf(r, 'status'))}</span>
               <div className="muted">{fieldOf(r, 'notes')}</div>
               {isManager && fieldOf(r, 'status') !== 'SIGNED' ? (
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>

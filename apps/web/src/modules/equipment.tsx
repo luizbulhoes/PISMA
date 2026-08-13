@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel } from '../labels';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
 type Equipment = Record<string, unknown>;
@@ -110,7 +111,7 @@ export function EquipmentPage() {
             <tr>
               <th align="left">TAG</th>
               <th align="left">Nome</th>
-              <th align="left">Status</th>
+              <th align="left">Situação</th>
               <th align="left">Certificado</th>
               <th />
             </tr>
@@ -132,7 +133,7 @@ export function EquipmentPage() {
                     </td>
                     <td>{fieldOf(eq, 'name', 'description')}</td>
                     <td>
-                      <span className="badge">{fieldOf(eq, 'status')}</span>
+                      <span className="badge">{displayLabel(fieldOf(eq, 'status'))}</span>
                     </td>
                     <td>
                       {fieldOf(eq, 'certificateNumber', 'certificate_number')}{' '}

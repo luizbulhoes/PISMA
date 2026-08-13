@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel } from '../labels';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
 type Row = Record<string, unknown>;
@@ -174,7 +175,7 @@ export function InspectionsPage() {
           runs.map((r) => (
             <div key={fieldOf(r, 'id')} style={{ marginBottom: 8 }}>
               <b>{fieldOf(r, 'name', 'template_name', 'title')}</b> —{' '}
-              <span className="badge">{fieldOf(r, 'status')}</span>{' '}
+              <span className="badge">{displayLabel(fieldOf(r, 'status'))}</span>{' '}
               <span className="muted">{fieldOf(r, 'createdAt', 'created_at')}</span>
             </div>
           ))

@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel, roleLabel } from '../labels';
 import { CriticalActionButton } from '../offline';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
@@ -44,7 +45,7 @@ export function OccurrencesPage() {
             <tr>
               <th align="left">Tipo</th>
               <th align="left">Título</th>
-              <th align="left">Status</th>
+              <th align="left">Situação</th>
               <th align="left">Data</th>
               <th />
             </tr>
@@ -60,10 +61,10 @@ export function OccurrencesPage() {
               items.map((o) => (
                 <tr key={fieldOf(o, 'id')}>
                   <td>
-                    <span className="badge">{fieldOf(o, 'type', 'kind')}</span>
+                    <span className="badge">{displayLabel(fieldOf(o, 'type', 'kind'))}</span>
                   </td>
                   <td>{fieldOf(o, 'title', 'summary')}</td>
-                  <td>{fieldOf(o, 'status')}</td>
+                  <td>{displayLabel(fieldOf(o, 'status'))}</td>
                   <td>{fieldOf(o, 'occurredAt', 'occurred_at', 'created_at')}</td>
                   <td>
                     <Link className="btn btn-ghost" to={`/ocorrencias/${fieldOf(o, 'id')}`}>
@@ -165,6 +166,7 @@ export function OccurrenceDetailPage() {
   const [data, setData] = useState<Row | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [people, setPeople] = useState<Row[]>([]);
   const [participant, setParticipant] = useState({ userId: '', role: 'WITNESS' });
   const [statement, setStatement] = useState('');
   const [pin, setPin] = useState('');
@@ -185,6 +187,12 @@ export function OccurrenceDetailPage() {
   useEffect(() => {
     void load();
   }, [token, id]);
+
+  useEffect(() => {
+    void api<{ items: Row[] }>('/technicians', { token })
+      .then((r) => setPeople(r.items ?? []))
+      .catch(() => setPeople([]));
+  }, [token]);
 
   async function addParticipant(e: FormEvent) {
     e.preventDefault();
@@ -291,8 +299,8 @@ export function OccurrenceDetailPage() {
   return (
     <>
       <PageHead
-        title={`${fieldOf(data ?? {}, 'type', 'kind')} — ${fieldOf(data ?? {}, 'title', 'summary')}`}
-        subtitle={fieldOf(data ?? {}, 'status')}
+        title={`${displayLabel(fieldOf(data ?? {}, 'type', 'kind'))} — ${fieldOf(data ?? {}, 'title', 'summary')}`}
+        subtitle={displayLabel(fieldOf(data ?? {}, 'status'))}
         actions={
           <Link className="btn btn-ghost" to="/ocorrencias">
             Voltar
@@ -314,18 +322,25 @@ export function OccurrenceDetailPage() {
         <h3 style={{ marginTop: 0 }}>Participantes</h3>
         {participants.map((p) => (
           <div key={fieldOf(p, 'id')}>
-            {fieldOf(p, 'name', 'full_name', 'userId')} — {fieldOf(p, 'role', 'process_role')}
+            {fieldOf(p, 'name', 'full_name', 'userId')} — {displayLabel(fieldOf(p, 'role', 'process_role'))}
           </div>
         ))}
         {canManage ? (
           <form onSubmit={addParticipant} style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input
+            <select
               className="field"
-              placeholder="User ID"
+              required
               value={participant.userId}
               onChange={(e) => setParticipant({ ...participant, userId: e.target.value })}
               style={{ maxWidth: 280 }}
-            />
+            >
+              <option value="">Selecione o técnico…</option>
+              {people.map((t) => (
+                <option key={fieldOf(t, 'id')} value={fieldOf(t, 'id')}>
+                  {fieldOf(t, 'full_name', 'fullName', 'name')}
+                </option>
+              ))}
+            </select>
             <select
               className="field"
               value={participant.role}
@@ -350,7 +365,7 @@ export function OccurrenceDetailPage() {
           return (
             <div key={fieldOf(s, 'id')} style={{ marginBottom: 10, borderTop: '1px solid #eee', paddingTop: 8 }}>
               <div className="muted">
-                {fieldOf(s, 'authorName', 'author_id')} — {fieldOf(s, 'status')}
+                {fieldOf(s, 'authorName', 'author_id')} — {displayLabel(fieldOf(s, 'status'))}
               </div>
               <div>{fieldOf(s, 'body', 'text')}</div>
               {!signed ? (
@@ -405,12 +420,12 @@ export function OccurrenceDetailPage() {
             <label className="muted">PDF da CAT (obrigatório para assinar conclusão de RA)</label>
             <input
               className="field"
-              placeholder="ID do arquivo CAT PDF"
+              placeholder="Identificador do PDF da CAT"
               value={catFileId}
               onChange={(e) => setCatFileId(e.target.value)}
             />
             {!hasCat ? (
-              <p className="error">Assinaturas de conclusão de RA bloqueadas sem CAT PDF.</p>
+              <p className="error">Assinaturas de conclusão de RA bloqueadas sem o PDF da CAT.</p>
             ) : null}
           </div>
         ) : null}
@@ -440,7 +455,7 @@ export function OccurrenceDetailPage() {
               disabled={isRa && !hasCat}
               onClick={() => void signConclusion(slot)}
             >
-              Assinar como {slot}
+              Assinar como {roleLabel(slot)}
             </CriticalActionButton>
           ))}
         </div>

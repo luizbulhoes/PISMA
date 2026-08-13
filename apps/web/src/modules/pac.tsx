@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel } from '../labels';
 import { CriticalActionButton } from '../offline';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
@@ -12,6 +13,7 @@ export function PacPage() {
   const [params] = useSearchParams();
   const fromAudicamp = params.get('fromAudicamp') ?? '';
   const [items, setItems] = useState<Row[]>([]);
+  const [people, setPeople] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -37,6 +39,12 @@ export function PacPage() {
 
   useEffect(() => {
     void load();
+  }, [token]);
+
+  useEffect(() => {
+    void api<{ items: Row[] }>('/technicians', { token })
+      .then((r) => setPeople(r.items ?? []))
+      .catch(() => setPeople([]));
   }, [token]);
 
   useEffect(() => {
@@ -127,12 +135,19 @@ export function PacPage() {
               value={form.deadline}
               onChange={(e) => setForm({ ...form, deadline: e.target.value })}
             />
-            <input
+            <select
               className="field"
-              placeholder="ID do responsável"
+              required
               value={form.responsibleUserId}
               onChange={(e) => setForm({ ...form, responsibleUserId: e.target.value })}
-            />
+            >
+              <option value="">Responsável…</option>
+              {people.map((t) => (
+                <option key={fieldOf(t, 'id')} value={fieldOf(t, 'id')}>
+                  {fieldOf(t, 'full_name', 'fullName', 'name')}
+                </option>
+              ))}
+            </select>
             <input
               className="field"
               placeholder="Audicamp origem (opcional)"
@@ -165,7 +180,7 @@ export function PacPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                   <div>
                     <b>{fieldOf(p, 'title')}</b>{' '}
-                    <span className="badge">{fieldOf(p, 'status')}</span>
+                    <span className="badge">{displayLabel(fieldOf(p, 'status'))}</span>
                     <div className="muted">
                       Prazo {fieldOf(p, 'deadline')} • Resp. {fieldOf(p, 'responsibleName', 'responsible_user_id')}
                     </div>

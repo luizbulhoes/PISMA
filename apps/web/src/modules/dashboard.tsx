@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { displayLabel, roleLabel } from '../labels';
 import { useOnline } from '../offline';
 import { Err, PageHead, fieldOf } from './shared';
 
@@ -49,10 +50,10 @@ export function DashboardPage() {
     <>
       <PageHead
         title={user?.role === 'TST' || user?.role === 'MANAGER' ? 'Resumo SST / Meio Ambiente' : 'Resumo Geral'}
-        subtitle={`${user?.workName ?? ''} • ${online ? 'Online' : 'Offline'}`}
+        subtitle={`${user?.workName ?? ''} • ${online ? 'Conectado' : 'Desconectado'}`}
         actions={
           <Link className="btn btn-ghost" to="/sync">
-            Status de sync
+            Sincronização
           </Link>
         }
       />
@@ -66,14 +67,14 @@ export function DashboardPage() {
         </div>
         <div className="card kpi">
           <label>Papel</label>
-          <b style={{ fontSize: 18 }}>{user?.role}</b>
+          <b style={{ fontSize: 18 }}>{roleLabel(user?.role)}</b>
           <span className="muted">{user?.canEmitPt ? 'Pode emitir PT' : 'Não emite PT'}</span>
         </div>
         {kpis.slice(0, 2).map((k) => (
           <div className="card kpi" key={k.label}>
             <label>{k.label}</label>
             <b>{valueFor(k.keys)}</b>
-            <span className="muted">/dashboards/summary</span>
+            <span className="muted">indicadores da obra</span>
           </div>
         ))}
       </div>
@@ -92,14 +93,14 @@ export function DashboardPage() {
         {sync ? (
           <ul className="muted">
             <li>Fila pendente: {fieldOf(sync, 'pending', 'queuePending', 'pendingCount')}</li>
-            <li>Última sync: {fieldOf(sync, 'lastSyncAt', 'last_sync_at', 'updatedAt')}</li>
-            <li>Estado: {fieldOf(sync, 'status', 'state')}</li>
+            <li>Última sincronização: {fieldOf(sync, 'lastSyncAt', 'last_sync_at', 'updatedAt')}</li>
+            <li>Estado: {displayLabel(fieldOf(sync, 'status', 'state'))}</li>
           </ul>
         ) : (
           <p className="muted">
             {online
-              ? 'Endpoint /sync/status indisponível ou sem dados.'
-              : 'Offline — sync retomará ao reconectar.'}
+              ? 'Sem dados de sincronização no momento.'
+              : 'Desconectado — a sincronização retoma ao reconectar.'}
           </p>
         )}
       </div>
@@ -118,7 +119,7 @@ export function SyncStatusPage() {
       setError(null);
       setSync(await api<Summary>('/sync/status', { token }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao consultar sync');
+      setError(e instanceof Error ? e.message : 'Falha ao consultar sincronização');
       setSync(null);
     }
   }
@@ -130,7 +131,7 @@ export function SyncStatusPage() {
   return (
     <>
       <PageHead
-        title="Status de sincronização"
+        title="Situação da sincronização"
         subtitle={online ? 'Conectado' : 'Sem conexão — assinaturas bloqueadas'}
         actions={
           <button className="btn btn-primary" type="button" onClick={() => void load()} disabled={!online}>
@@ -141,11 +142,13 @@ export function SyncStatusPage() {
       <Err error={error} />
       <div className="card">
         {!sync ? (
-          <p className="muted">Sem dados de sync.</p>
+          <p className="muted">Sem dados de sincronização.</p>
         ) : (
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 13 }}>
-            {JSON.stringify(sync, null, 2)}
-          </pre>
+          <ul className="muted" style={{ margin: 0 }}>
+            <li>Fila pendente: {fieldOf(sync, 'pending', 'queuePending', 'pendingCount')}</li>
+            <li>Última sincronização: {fieldOf(sync, 'lastSyncAt', 'last_sync_at', 'updatedAt')}</li>
+            <li>Estado: {displayLabel(fieldOf(sync, 'status', 'state'))}</li>
+          </ul>
         )}
       </div>
     </>

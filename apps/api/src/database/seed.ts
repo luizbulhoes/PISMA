@@ -210,7 +210,7 @@ async function main() {
   );
   await client.query(
     `INSERT INTO user_profiles (user_id, full_name, job_function, employer)
-     VALUES ($1, 'Novo Colaborador Demo', 'Técnico Elétrico', 'Empresa Demo PISMA')
+     VALUES ($1, 'Técnico Novo Demo', 'Técnico Elétrico', 'Empresa Demo PISMA')
      ON CONFLICT (user_id) DO NOTHING`,
     [pending.rows[0].id],
   );

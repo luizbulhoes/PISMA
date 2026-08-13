@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from './api';
 import { useAuth } from './auth';
+import { displayLabel, roleLabel } from './labels';
 
 type TechListItem = {
   id: string;
@@ -226,7 +227,7 @@ export function TechnicianDetailPage({ self = false }: { self?: boolean }) {
         </div>
         <div className="card kpi">
           <label>Assinatura</label>
-          <b style={{ fontSize: 16 }}>{data.profile.signature_status ?? '—'}</b>
+          <b style={{ fontSize: 16 }}>{displayLabel(data.profile.signature_status)}</b>
         </div>
       </div>
 
@@ -275,7 +276,7 @@ export function TechnicianDetailPage({ self = false }: { self?: boolean }) {
         <h3>EPI / Termos</h3>
         {data.ppeDeliveries.map((d: any) => (
           <div key={d.id} style={{ marginBottom: 8 }}>
-            {d.delivered_at} • {d.reason} • termo {d.term_status}
+            {d.delivered_at} • {d.reason} • termo {displayLabel(d.term_status)}
           </div>
         ))}
         {self && data.ppeDeliveries.some((d: any) => d.term_status === 'PENDING_SIGNATURE') ? (
@@ -326,9 +327,9 @@ export function TechnicianDetailPage({ self = false }: { self?: boolean }) {
             <form className="card" onSubmit={onBlock}>
               <h3>Bloquear usuário</h3>
               <select className="field" value={block.scope} onChange={(e) => setBlock({ ...block, scope: e.target.value })}>
-                <option value="EMIT_PT">EMIT_PT</option>
-                <option value="SIGN">SIGN</option>
-                <option value="ALL_OPERATIONAL">ALL_OPERATIONAL</option>
+                <option value="EMIT_PT">Emitir PT</option>
+                <option value="SIGN">Assinar</option>
+                <option value="ALL_OPERATIONAL">Todas as operações</option>
               </select>
               <div style={{ height: 8 }} />
               <input className="field" placeholder="Motivo obrigatório" value={block.reason} onChange={(e) => setBlock({ ...block, reason: e.target.value })} />
@@ -393,7 +394,7 @@ export function CompetencyPage() {
             {items.map((r) => (
               <tr key={r.id}>
                 <td>{r.name}</td>
-                <td>{r.requirement_type}</td>
+                <td>{displayLabel(r.requirement_type)}</td>
                 <td>{r.requirement_key}</td>
                 <td>{r.blocking ? 'Sim' : 'Não'}</td>
               </tr>
@@ -442,11 +443,11 @@ export function UsersAdminPage() {
           <input className="field" placeholder="Nome" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
           <input className="field" placeholder="Função" value={form.jobFunction} onChange={(e) => setForm({ ...form, jobFunction: e.target.value })} />
           <select className="field" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-            <option value="TECHNICIAN">TECHNICIAN</option>
-            <option value="TST">TST</option>
-            <option value="SUPERVISOR">SUPERVISOR</option>
-            <option value="MANAGER">MANAGER</option>
-            <option value="MASTER">MASTER</option>
+            <option value="TECHNICIAN">{roleLabel('TECHNICIAN')}</option>
+            <option value="TST">{roleLabel('TST')}</option>
+            <option value="SUPERVISOR">{roleLabel('SUPERVISOR')}</option>
+            <option value="MANAGER">{roleLabel('MANAGER')}</option>
+            <option value="MASTER">{roleLabel('MASTER')}</option>
           </select>
         </div>
         <div style={{ height: 8 }} />
@@ -455,7 +456,7 @@ export function UsersAdminPage() {
       <div className="card">
         {items.map((u) => (
           <div key={u.id} style={{ marginBottom: 6 }}>
-            <b>{u.full_name ?? u.username}</b> — {u.role} — {u.status}
+            <b>{u.full_name ?? u.username}</b> — {roleLabel(u.role)} — {displayLabel(u.status)}
           </div>
         ))}
       </div>

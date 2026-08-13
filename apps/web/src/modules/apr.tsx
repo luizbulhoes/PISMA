@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
-import { ACTIVITY_NATURES, defaultNaturesMap, roleLabel, type NatureFill } from '../labels';
+import { ACTIVITY_NATURES, defaultNaturesMap, displayLabel, roleLabel, type NatureFill } from '../labels';
 import { CriticalActionButton } from '../offline';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
@@ -127,7 +127,7 @@ export function AprPage() {
       h1{margin:0 0 8px}.muted{color:#5a6f67}.box{border:1px solid #dce8e2;padding:12px;border-radius:8px;margin-top:12px}</style>
       </head><body>
       <h1>APR — ${fieldOf(apr, 'title')}</h1>
-      <div class="muted">Atividade: ${fieldOf(apr, 'activity')} · Status: ${fieldOf(apr, 'status')}</div>
+      <div class="muted">Atividade: ${fieldOf(apr, 'activity')} · Situação: ${displayLabel(fieldOf(apr, 'status'))}</div>
       <div class="box"><b>Naturezas aplicáveis</b><div>${applicable || '—'}</div></div>
       <div class="box"><b>Perigos</b><pre>${JSON.stringify(content.hazards ?? [], null, 2)}</pre></div>
       <div class="box"><b>Controles</b><pre>${JSON.stringify(content.controls ?? [], null, 2)}</pre></div>
@@ -282,7 +282,7 @@ export function AprPage() {
               <th align="left">Título</th>
               <th align="left">Atividade</th>
               <th align="left">Naturezas</th>
-              <th align="left">Status</th>
+              <th align="left">Situação</th>
               <th />
             </tr>
           </thead>
@@ -307,7 +307,7 @@ export function AprPage() {
                     <td>{fieldOf(a, 'activity', 'activity_name')}</td>
                     <td className="muted">{applicable || '—'}</td>
                     <td>
-                      <span className="badge">{fieldOf(a, 'status')}</span>
+                      <span className="badge">{displayLabel(fieldOf(a, 'status'))}</span>
                     </td>
                     <td>
                       <button
@@ -330,7 +330,7 @@ export function AprPage() {
         <div className="card" style={{ marginBottom: 12 }}>
           <h3 style={{ marginTop: 0 }}>{fieldOf(selected, 'title')}</h3>
           <p className="muted">
-            {fieldOf(selected, 'activity')} · {fieldOf(selected, 'status')}
+            {fieldOf(selected, 'activity')} · {displayLabel(fieldOf(selected, 'status'))}
           </p>
           <div style={{ marginBottom: 8 }}>
             <b>Perigos</b>

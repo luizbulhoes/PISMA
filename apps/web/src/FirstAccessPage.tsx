@@ -146,7 +146,7 @@ export function FirstAccessPage() {
       }
       setStep((s) => s + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro');
+      setError(err instanceof Error ? err.message : 'Falha na ativação da conta');
     }
   }
 
