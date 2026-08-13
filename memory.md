@@ -4,7 +4,7 @@
 **Versão:** 1.3  
 **Repositório canônico:** https://github.com/luizbulhoes/PISMA  
 **Fonte de requisitos:** `PISMA_IA_Development_Package_v1.3_CONSOLIDADO/01_CANONICAL_SPEC/PISMA_PRD_v1.3.md`  
-**Última atualização deste arquivo:** 2026-08-13 (PT técnicos envolvidos + pt-BR na UI)
+**Última atualização deste arquivo:** 2026-08-13 (PT assinatura do emissor, equipe e bloqueio em Não)
 
 ---
 
@@ -20,6 +20,17 @@ Manter **sempre** o remoto `origin/main` alinhado ao trabalho local:
 Remote: `https://github.com/luizbulhoes/PISMA.git`
 
 ---
+
+### 2026-08-13 — PT: assinatura do emissor, equipe e bloqueio em Não
+
+**Tipo:** correção / melhoria · **Status:** feito · **Git:** (push `main`)
+
+- Após o técnico emitir/submeter a PT, a assinatura digital do **emissor** aparece na lista (não mais “sem assinaturas” enquanto aguarda TST/Supervisor).
+- Técnicos envolvidos: lista da Obra com técnicos e supervisor, **exceto o próprio emissor**.
+- Qualquer item marcado como **Não** impede avançar/emitir a PT (UI + API). Precauções obrigatórias não têm N/A — só Sim/Não.
+- Menu: ao abrir Nova PT, só esse item fica destacado (`end` no NavLink). O campo APR deixou de ser o primeiro da tela e só recebe foco ao ser clicado.
+
+**Por quê:** a emissão já é uma assinatura; a equipe da atividade não inclui o emissor; Não é bloqueante de segurança; o destaque do menu/campo não pode induzir seleção de APR.
 
 ### 2026-08-13 — Técnicos envolvidos na PT + interface em português
 

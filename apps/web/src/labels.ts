@@ -6,6 +6,7 @@ export const ROLE_LABELS: Record<string, string> = {
   TST: 'TST',
   SUPERVISOR: 'Supervisor',
   MANAGER: 'Gestor',
+  ISSUER: 'Técnico emissor',
 };
 
 export function roleLabel(role: string | null | undefined): string {
@@ -99,6 +100,7 @@ export const DISPLAY_LABELS: Record<string, string> = {
   TECHNICIAN_2: 'Técnico 2',
   TECHNICIAN_3: 'Técnico 3',
   TECHNICIAN_4: 'Técnico 4',
+  ISSUER: 'Técnico emissor',
   OTHER_INVOLVED: 'Outro envolvido',
   APPLICABLE: 'Aplicável',
   ONLINE: 'Conectado',

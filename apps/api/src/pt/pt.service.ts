@@ -190,6 +190,27 @@ export class PtService {
        WHERE u.id = $1`,
       [res.rows[0].created_by],
     );
+    const issuerCred = await this.db.query<{ visual_signature_file_id: string | null }>(
+      `SELECT visual_signature_file_id FROM signature_credentials
+       WHERE user_id = $1 AND status = 'ACTIVE' ORDER BY created_at DESC LIMIT 1`,
+      [res.rows[0].created_by],
+    );
+    const storedIssuer = answers.issuerSignature as
+      | { signedAt?: string; authorized?: boolean }
+      | undefined;
+    const submittedAt = (current?.submitted_at as string | Date | undefined) ?? null;
+    const issuerSignedAt =
+      storedIssuer?.signedAt ?? (submittedAt ? String(submittedAt) : null);
+    const issuerSignature =
+      issuerSignedAt || storedIssuer?.authorized
+        ? {
+            slot: 'ISSUER',
+            signer_name: issuer.rows[0]?.full_name ?? null,
+            signed_at: issuerSignedAt,
+            decision: 'SIGNED',
+            visual_signature_file_id: issuerCred.rows[0]?.visual_signature_file_id ?? null,
+          }
+        : null;
     const approvalsEnriched = await Promise.all(
       (approvals as Array<Record<string, unknown>>).map(async (a) => {
         const sig = await this.db.query(
@@ -219,6 +240,7 @@ export class PtService {
       hazards: answers.hazards ?? null,
       os: res.rows[0].os_number,
       issuerName: issuer.rows[0]?.full_name ?? null,
+      issuerSignature,
       versions: versions.rows,
       approvals: approvalsEnriched,
       team,
@@ -298,6 +320,7 @@ export class PtService {
     );
     const ptId = pt.rows[0].id as string;
     const answers = input.answers ?? {};
+    this.assertChecklistAllowsProgress(answers);
     const snapshot = { answers, osNumber: input.osNumber, issueNumber };
     const sha = createHash('sha256').update(JSON.stringify(snapshot)).digest('hex');
     const ver = await this.db.query(
@@ -320,7 +343,7 @@ export class PtService {
     await this.attachVersionExtras(
       ver.rows[0].id as string,
       input.equipmentAssetIds,
-      input.teamMembers,
+      await this.resolveTeamMembers(workId, user.userId, input.teamMembers),
     );
     await this.audit.append({
       workId,
@@ -332,6 +355,74 @@ export class PtService {
       payload: { osNumber: input.osNumber, issueNumber },
     });
     return this.get(user, ptId);
+  }
+
+  private assertChecklistAllowsProgress(answers: Record<string, unknown>) {
+    const precautions = (answers.precautions as Record<string, string> | undefined) ?? {};
+    for (const [item, value] of Object.entries(precautions)) {
+      if (value === 'NO') {
+        throw new BadRequestException(
+          `A PT não pode evoluir: a precaução obrigatória foi marcada como Não (${item})`,
+        );
+      }
+    }
+    const natures = (answers.natures as Record<string, string> | undefined) ?? {};
+    const checklists =
+      (answers.natureChecklists as Record<string, Record<string, string>> | undefined) ?? {};
+    for (const [code, items] of Object.entries(checklists)) {
+      if (natures[code] && natures[code] !== 'APPLICABLE') continue;
+      for (const [item, value] of Object.entries(items ?? {})) {
+        if (value === 'NO') {
+          throw new BadRequestException(
+            `A PT não pode evoluir: um item foi marcado como Não (${item})`,
+          );
+        }
+      }
+    }
+  }
+
+  private async resolveTeamMembers(
+    workId: string,
+    issuerId: string,
+    teamMembers?: {
+      linkedUserId?: string;
+      name: string;
+      jobFunction?: string;
+      employeeNumber?: string;
+      employer?: string;
+    }[],
+  ) {
+    if (!teamMembers?.length) return teamMembers;
+    const resolved = [];
+    for (const m of teamMembers) {
+      if (!m.linkedUserId || m.linkedUserId === issuerId) continue;
+      const row = await this.db.query<{
+        full_name: string;
+        job_function: string | null;
+        employee_number: string | null;
+        employer: string | null;
+        role: string;
+      }>(
+        `SELECT COALESCE(p.full_name, u.username) AS full_name, p.job_function,
+                p.employee_number, p.employer, uwr.role
+         FROM users u
+         JOIN user_work_roles uwr ON uwr.user_id = u.id AND uwr.work_id = $2 AND uwr.active
+         LEFT JOIN user_profiles p ON p.user_id = u.id
+         WHERE u.id = $1 AND uwr.role IN ('TECHNICIAN', 'SUPERVISOR')
+         LIMIT 1`,
+        [m.linkedUserId, workId],
+      );
+      if (!row.rowCount) continue;
+      const r = row.rows[0];
+      resolved.push({
+        linkedUserId: m.linkedUserId,
+        name: r.full_name,
+        jobFunction: m.jobFunction ?? r.job_function ?? undefined,
+        employeeNumber: m.employeeNumber ?? r.employee_number ?? undefined,
+        employer: m.employer ?? r.employer ?? undefined,
+      });
+    }
+    return resolved;
   }
 
   private async attachVersionExtras(
@@ -523,9 +614,26 @@ export class PtService {
     }
     await this.assertCompetency(user, this.workId(user));
     await this.assertEquipmentReady(pt);
+    this.assertChecklistAllowsProgress(
+      (pt.answers as Record<string, unknown>) ?? {},
+    );
+    const cred = await this.db.query<{ id: string }>(
+      `SELECT id FROM signature_credentials
+       WHERE user_id = $1 AND status = 'ACTIVE' ORDER BY created_at DESC LIMIT 1`,
+      [user.userId],
+    );
+    const issuerSignature = {
+      authorized: true,
+      signedAt: new Date().toISOString(),
+      signerUserId: user.userId,
+      signatureCredentialId: cred.rows[0]?.id ?? null,
+    };
     await this.db.query(
-      `UPDATE pt_versions SET status = 'SUBMITTED', submitted_at = NOW() WHERE id = $1`,
-      [pt.current_version_id],
+      `UPDATE pt_versions
+       SET status = 'SUBMITTED', submitted_at = NOW(),
+           answers_jsonb = COALESCE(answers_jsonb, '{}'::jsonb) || $2::jsonb
+       WHERE id = $1`,
+      [pt.current_version_id, JSON.stringify({ issuerSignature })],
     );
     const res = await this.db.query(
       `UPDATE pt_instances SET status = 'SUBMITTED', updated_at = NOW() WHERE id = $1 RETURNING *`,

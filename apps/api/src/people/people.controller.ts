@@ -45,6 +45,12 @@ export class PeopleController {
     return this.people.createUser(req.user, parsed);
   }
 
+  @Get('work-team')
+  @Roles('TST', 'MANAGER', 'MASTER', 'TECHNICIAN', 'SUPERVISOR')
+  listWorkTeam(@Req() req: RequestWithUser) {
+    return this.people.listWorkTeam(req.user);
+  }
+
   @Get('technicians')
   @Roles('TST', 'MANAGER', 'MASTER', 'TECHNICIAN', 'SUPERVISOR')
   listTechnicians(@Req() req: RequestWithUser) {

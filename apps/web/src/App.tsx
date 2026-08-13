@@ -1,5 +1,5 @@
 import { FormEvent, useState, useEffect } from 'react';
-import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
 import { api } from './api';
 import { displayLabel, roleLabel } from './labels';
@@ -86,6 +86,7 @@ function LoginPage() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
+  const location = useLocation();
   if (!user) return <Navigate to="/login" replace />;
   if (!user.firstLoginCompleted) return <Navigate to="/primeiro-acesso" replace />;
 
@@ -108,7 +109,21 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="nav">
           {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.to === '/'}>
+            <NavLink
+              key={l.to}
+              to={l.to}
+              end
+              className={({ isActive }) => {
+                if (
+                  l.to === '/pts' &&
+                  location.pathname.startsWith('/pts/') &&
+                  !location.pathname.startsWith('/pts/nova')
+                ) {
+                  return 'active';
+                }
+                return isActive ? 'active' : undefined;
+              }}
+            >
               {l.label}
             </NavLink>
           ))}

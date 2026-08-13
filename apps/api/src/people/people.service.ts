@@ -217,6 +217,33 @@ export class PeopleService {
     return { items, alertDays };
   }
 
+  /** Técnicos e supervisores da Obra, excluindo o próprio usuário autenticado. */
+  async listWorkTeam(actor: AuthUser) {
+    const workId = this.assertSameWork(actor);
+    const res = await this.db.query<{
+      id: string;
+      username: string;
+      full_name: string;
+      job_function: string | null;
+      role: string;
+    }>(
+      `SELECT * FROM (
+         SELECT DISTINCT ON (u.id)
+           u.id, u.username, COALESCE(p.full_name, u.username) AS full_name,
+           p.job_function, uwr.role
+         FROM users u
+         JOIN user_work_roles uwr ON uwr.user_id = u.id AND uwr.work_id = $1 AND uwr.active
+         LEFT JOIN user_profiles p ON p.user_id = u.id
+         WHERE uwr.role IN ('TECHNICIAN', 'SUPERVISOR')
+           AND u.id <> $2
+         ORDER BY u.id, CASE uwr.role WHEN 'SUPERVISOR' THEN 0 ELSE 1 END
+       ) team
+       ORDER BY team.full_name`,
+      [workId, actor.userId],
+    );
+    return { items: res.rows };
+  }
+
   async getTechnicianProfile(actor: AuthUser, technicianId: string) {
     const workId = this.assertSameWork(actor);
     const isSelf = actor.userId === technicianId;

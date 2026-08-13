@@ -18,6 +18,55 @@ function natureLabel(code: string) {
   return ACTIVITY_NATURES.find((n) => n.code === code)?.label ?? code;
 }
 
+function blockingNoReason(form: {
+  natures: Record<string, NatureFill>;
+  natureChecklists: Record<string, Record<string, ChecklistAnswer>>;
+  precautions: Record<string, ChecklistAnswer>;
+}): string | null {
+  for (const n of ACTIVITY_NATURES) {
+    if (form.natures[n.code] !== 'APPLICABLE') continue;
+    const items = NATURE_MODULES[n.code]?.items ?? [];
+    const answers = form.natureChecklists[n.code] ?? {};
+    for (const item of items) {
+      if (answers[item] === 'NO') {
+        return `A PT não pode evoluir enquanto “${item}” estiver marcado como Não.`;
+      }
+    }
+  }
+  for (const p of GENERAL_PRECAUTIONS) {
+    if (form.precautions[p] === 'NO') {
+      return `A PT não pode evoluir enquanto uma precaução obrigatória estiver marcada como Não.`;
+    }
+  }
+  return null;
+}
+
+function incompleteChecklistReason(form: {
+  natures: Record<string, NatureFill>;
+  natureChecklists: Record<string, Record<string, ChecklistAnswer>>;
+  precautions: Record<string, ChecklistAnswer>;
+  step: number;
+}): string | null {
+  if (form.step === 1) {
+    for (const n of ACTIVITY_NATURES) {
+      if (form.natures[n.code] !== 'APPLICABLE') continue;
+      const items = NATURE_MODULES[n.code]?.items ?? [];
+      const answers = form.natureChecklists[n.code] ?? {};
+      for (const item of items) {
+        if (!answers[item]) return `Responda todos os itens de ${n.label}.`;
+      }
+    }
+  }
+  if (form.step === 2) {
+    for (const p of GENERAL_PRECAUTIONS) {
+      if (form.precautions[p] !== 'YES') {
+        return 'Todas as precauções obrigatórias precisam estar marcadas como Sim.';
+      }
+    }
+  }
+  return null;
+}
+
 export function PtsPage() {
   const { token, user } = useAuth();
   const [items, setItems] = useState<Row[]>([]);
@@ -201,7 +250,7 @@ export function PtNewPage() {
     void api<unknown>('/equipment', { token })
       .then((r) => setEquipment(emptyItems<Row>(r)))
       .catch(() => setEquipment([]));
-    void api<unknown>('/technicians', { token })
+    void api<unknown>('/work-team', { token })
       .then((r) => setTechnicians(emptyItems<Row>(r)))
       .catch(() => setTechnicians([]));
     void api<unknown>('/locations', { token })
@@ -295,6 +344,11 @@ export function PtNewPage() {
       setError('Autorize a assinatura digital para emitir a PT.');
       return;
     }
+    const noReason = blockingNoReason(form);
+    if (noReason) {
+      setError(noReason);
+      return;
+    }
     try {
       setError(null);
       const created = await api<Row>('/pts', {
@@ -322,7 +376,7 @@ export function PtNewPage() {
           body: JSON.stringify({ aprId: form.aprId }),
         }).catch(() => undefined);
       }
-      await api(`/pts/${id}/submit`, { method: 'POST', token }).catch(() => undefined);
+      await api(`/pts/${id}/submit`, { method: 'POST', token });
       nav(`/pts/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao criar PT');
@@ -356,24 +410,6 @@ export function PtNewPage() {
       <form className="card" onSubmit={submit}>
         {step === 0 ? (
           <>
-            <label className="muted">Vincular APR existente</label>
-            <select
-              className="field"
-              value={form.aprId}
-              onChange={(e) => void onSelectApr(e.target.value)}
-            >
-              <option value="">Sem APR vinculada nesta etapa</option>
-              {aprs.map((a) => (
-                <option key={fieldOf(a, 'id')} value={fieldOf(a, 'id')}>
-                  {fieldOf(a, 'title', 'name')} — {displayLabel(fieldOf(a, 'status'))}
-                </option>
-              ))}
-            </select>
-            <p className="muted" style={{ marginTop: 6 }}>
-              A APR define naturezas do local analisado: itens aplicáveis são automarcados e não
-              alteráveis.
-            </p>
-            <div style={{ height: 8 }} />
             <label className="muted">Local de trabalho</label>
             <select
               className="field"
@@ -405,6 +441,23 @@ export function PtNewPage() {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
+            <div style={{ height: 8 }} />
+            <label className="muted">Vincular APR existente (opcional)</label>
+            <select
+              className="field"
+              value={form.aprId}
+              onChange={(e) => void onSelectApr(e.target.value)}
+            >
+              <option value="">Não vincular APR agora</option>
+              {aprs.map((a) => (
+                <option key={fieldOf(a, 'id')} value={fieldOf(a, 'id')}>
+                  {fieldOf(a, 'title', 'name')} — {displayLabel(fieldOf(a, 'status'))}
+                </option>
+              ))}
+            </select>
+            <p className="muted" style={{ marginTop: 6 }}>
+              Se vincular, as naturezas aplicáveis da APR são automarcadas e não alteráveis.
+            </p>
           </>
         ) : null}
 
@@ -460,8 +513,8 @@ export function PtNewPage() {
                                   type="radio"
                                   name={`${n.code}-${item}`}
                                   checked={(form.natureChecklists[n.code]?.[item] ?? '') === v}
-                                  onChange={() =>
-                                    setForm({
+                                  onChange={() => {
+                                    const next = {
                                       ...form,
                                       natureChecklists: {
                                         ...form.natureChecklists,
@@ -470,8 +523,10 @@ export function PtNewPage() {
                                           [item]: v,
                                         },
                                       },
-                                    })
-                                  }
+                                    };
+                                    setForm(next);
+                                    setError(blockingNoReason(next));
+                                  }}
                                 />
                                 {v === 'YES' ? 'Sim' : v === 'NO' ? 'Não' : 'N/A'}
                               </label>
@@ -498,26 +553,29 @@ export function PtNewPage() {
             />
             <div style={{ height: 12 }} />
             <b>Precauções obrigatórias para qualquer natureza</b>
+            <p className="muted">Somente Sim ou Não. Qualquer Não impede a emissão da PT.</p>
             {GENERAL_PRECAUTIONS.map((p) => (
               <div
                 key={p}
                 style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}
               >
                 <span style={{ flex: 1, minWidth: 200 }}>{p}</span>
-                {(['YES', 'NO', 'NA'] as const).map((v) => (
+                {(['YES', 'NO'] as const).map((v) => (
                   <label key={v} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                     <input
                       type="radio"
                       name={p}
                       checked={form.precautions[p] === v}
-                      onChange={() =>
-                        setForm({
+                      onChange={() => {
+                        const next = {
                           ...form,
                           precautions: { ...form.precautions, [p]: v },
-                        })
-                      }
+                        };
+                        setForm(next);
+                        setError(blockingNoReason(next));
+                      }}
                     />
-                    {v === 'YES' ? 'Sim' : v === 'NO' ? 'Não' : 'N/A'}
+                    {v === 'YES' ? 'Sim' : 'Não'}
                   </label>
                 ))}
               </div>
@@ -574,7 +632,10 @@ export function PtNewPage() {
                           borderBottom: '1px solid #dce8e2',
                         }}
                       >
-                        <span>{fieldOf(t, 'full_name', 'fullName', 'name')}</span>
+                        <span>
+                          {fieldOf(t, 'full_name', 'fullName', 'name')}
+                          {fieldOf(t, 'role') !== '—' ? ` — ${roleLabel(fieldOf(t, 'role'))}` : ''}
+                        </span>
                         <button
                           type="button"
                           className="btn btn-ghost"
@@ -675,11 +736,35 @@ export function PtNewPage() {
             </Link>
           )}
           {step < 4 ? (
-            <button type="button" className="btn btn-primary" onClick={() => setStep((s) => s + 1)}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={Boolean(blockingNoReason(form))}
+              onClick={() => {
+                const noReason = blockingNoReason(form);
+                if (noReason) {
+                  setError(noReason);
+                  return;
+                }
+                const incomplete = incompleteChecklistReason({ ...form, step });
+                if (incomplete) {
+                  setError(incomplete);
+                  return;
+                }
+                if (step === 0 && (!form.locationId || !form.os.trim() || !form.description.trim())) {
+                  setError('Preencha local, OS e descrição do serviço.');
+                  return;
+                }
+                setError(null);
+                setStep((s) => s + 1);
+              }}
+            >
               Continuar
             </button>
           ) : (
-            <button className="btn btn-primary">Criar e submeter</button>
+            <button className="btn btn-primary" disabled={Boolean(blockingNoReason(form))}>
+              Criar e submeter
+            </button>
           )}
         </div>
       </form>
@@ -688,7 +773,7 @@ export function PtNewPage() {
         <div className="modal-backdrop" onClick={() => setAddTechOpen(false)}>
           <div className="card modal-card" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>Novo técnico envolvido na atividade</h3>
-            <p className="muted">Selecione o técnico na lista da Obra.</p>
+            <p className="muted">Selecione outro técnico ou o supervisor da Obra. O emissor desta PT não aparece na lista.</p>
             <select
               className="field"
               value={addTechId}
@@ -703,6 +788,7 @@ export function PtNewPage() {
                 .map((t) => (
                   <option key={fieldOf(t, 'id')} value={fieldOf(t, 'id')}>
                     {fieldOf(t, 'full_name', 'fullName', 'name')}
+                    {fieldOf(t, 'role') !== '—' ? ` — ${roleLabel(fieldOf(t, 'role'))}` : ''}
                   </option>
                 ))}
             </select>
@@ -873,8 +959,13 @@ export function PtDetailPage() {
 
   const approvals = Array.isArray(pt?.approvals) ? (pt!.approvals as Row[]) : [];
   const checkins = Array.isArray(pt?.checkins) ? (pt!.checkins as Row[]) : [];
+  const issuerSignature =
+    pt?.issuerSignature && typeof pt.issuerSignature === 'object'
+      ? (pt.issuerSignature as Row)
+      : null;
   const natures = (pt?.natures as Record<string, string>) ?? {};
   const answers = (pt?.answers as Record<string, unknown>) ?? {};
+  const hasSignatures = Boolean(issuerSignature) || approvals.length > 0 || checkins.length > 0;
 
   return (
     <>
@@ -935,14 +1026,22 @@ export function PtDetailPage() {
 
       <div className="card" style={{ marginBottom: 12 }}>
         <h3 style={{ marginTop: 0 }}>Assinaturas digitais</h3>
-        {approvals.length === 0 && checkins.length === 0 ? (
+        {!hasSignatures ? (
           <p className="muted">Ainda sem assinaturas formais.</p>
         ) : (
           <>
+            {issuerSignature ? (
+              <div className="signature-box" style={{ marginBottom: 8 }}>
+                <b>{roleLabel('ISSUER')}</b> — {fieldOf(issuerSignature, 'signer_name')} ·{' '}
+                {displayLabel(fieldOf(issuerSignature, 'decision'))} ·{' '}
+                {fieldOf(issuerSignature, 'signed_at')}
+                <div className="muted">Assinatura do técnico emissor. Aguardando TST e Supervisor.</div>
+              </div>
+            ) : null}
             {approvals.map((a) => (
               <div key={fieldOf(a, 'id')} className="signature-box" style={{ marginBottom: 8 }}>
                 <b>{roleLabel(fieldOf(a, 'slot'))}</b> — {fieldOf(a, 'signer_name')} ·{' '}
-                {fieldOf(a, 'decision')} · {fieldOf(a, 'signed_at')}
+                {displayLabel(fieldOf(a, 'decision'))} · {fieldOf(a, 'signed_at')}
                 <div className="muted">Hash: {String(fieldOf(a, 'document_hash')).slice(0, 16)}…</div>
               </div>
             ))}
