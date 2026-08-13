@@ -1,0 +1,12 @@
+{
+  "source_of_truth": "01_CANONICAL_SPEC/PISMA_PRD_v1.3.md",
+  "reference_only_dir": "03_SOURCE_REFERENCES",
+  "future_not_implemented_dir": "04_FUTURE_NOT_IMPLEMENTED",
+  "ux_reference_dir": "02_UX_UI",
+  "precedence": [
+    "PISMA_PRD_v1.3.md",
+    "SCOPE_LOCK_v1.3.md for inclusion/exclusion clarity",
+    "source references"
+  ],
+  "do_not_use_old_prds": true
+}

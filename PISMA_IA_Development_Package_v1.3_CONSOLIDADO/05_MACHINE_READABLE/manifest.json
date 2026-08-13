@@ -1,0 +1,149 @@
+{
+  "package": "PISMA_IA_Development_Package_v1.3_CONSOLIDADO",
+  "product": "PISMA - Plataforma Integrada de Segurança e Meio Ambiente",
+  "version": "1.3",
+  "canonical_spec": "01_CANONICAL_SPEC/PISMA_PRD_v1.3.md",
+  "file_count": 29,
+  "files": [
+    {
+      "path": "00_START_HERE/ACCEPTANCE_GATE.md",
+      "size_bytes": 4653,
+      "sha256": "1ef261611ae941b72ebda313367bb827931249780179b90eb896003735c8ffbc"
+    },
+    {
+      "path": "00_START_HERE/IMPLEMENTATION_ROADMAP.md",
+      "size_bytes": 2995,
+      "sha256": "d8a13e9e62495f2d635b133475d8790ca611506fdb25717c5f7fc5ac12cfd45f"
+    },
+    {
+      "path": "00_START_HERE/MASTER_PROMPT_FOR_DEV_AI.md",
+      "size_bytes": 5053,
+      "sha256": "44d324f53e04c1b77d1b3440d33f904dd849fa962ce6e6bff9d298eb3d1ba5a1"
+    },
+    {
+      "path": "00_START_HERE/README_START_HERE.md",
+      "size_bytes": 1809,
+      "sha256": "45b9aa145e473a4d157a7d4b7225b703cc04cab81c775ce50653c150db1bb919"
+    },
+    {
+      "path": "00_START_HERE/SCOPE_LOCK_v1.3.md",
+      "size_bytes": 2908,
+      "sha256": "c2b93bee107f437a83610ad98d4c6f6988ad6c8e5a04045b66e6143b1417da1f"
+    },
+    {
+      "path": "01_CANONICAL_SPEC/CHANGELOG_v1.3.md",
+      "size_bytes": 1720,
+      "sha256": "2bbfdcfcdad52255e6e3b46d88ee9f6ec439ca8b241cae5b1de3ae72fa913b08"
+    },
+    {
+      "path": "01_CANONICAL_SPEC/PISMA_PRD_v1.3.md",
+      "size_bytes": 195154,
+      "sha256": "38dfb9a5a6cca7af32bc3899100911c3eacb7ca9bdc15ca84e183d71447a6d54"
+    },
+    {
+      "path": "01_CANONICAL_SPEC/PISMA_PRD_v1.3.pdf",
+      "size_bytes": 365254,
+      "sha256": "72bcdc570b3b75295feaffe3476e3c192bfeb7cf9a99e19aad6b10f4027b39b8"
+    },
+    {
+      "path": "01_CANONICAL_SPEC/REQUIREMENTS_INDEX.md",
+      "size_bytes": 23046,
+      "sha256": "4dc0d130194cc05ce8bf170e35233fe2f5ed3da58df3ec42640f94a8ca918881"
+    },
+    {
+      "path": "01_CANONICAL_SPEC/assets/architecture.png",
+      "size_bytes": 84043,
+      "sha256": "f874f31119158ad80168f3485c130ff954912eb7de93b94ba9e7f2ce67a3da47"
+    },
+    {
+      "path": "01_CANONICAL_SPEC/assets/workflow.png",
+      "size_bytes": 71596,
+      "sha256": "4ed6a84e225acbb10af1af5e857dc5d28d24316f77f73eadce30fe6e4ed5bad8"
+    },
+    {
+      "path": "02_UX_UI/Modelos_Frontend_PISMA_v1.3.pdf",
+      "size_bytes": 44539,
+      "sha256": "c40a2f4c840d31784a7f81ce30449a32f36a748ef3cc2f0c2f3e7bbc6208d420"
+    },
+    {
+      "path": "02_UX_UI/assets/architecture.png",
+      "size_bytes": 84043,
+      "sha256": "f874f31119158ad80168f3485c130ff954912eb7de93b94ba9e7f2ce67a3da47"
+    },
+    {
+      "path": "02_UX_UI/assets/workflow.png",
+      "size_bytes": 71596,
+      "sha256": "4ed6a84e225acbb10af1af5e857dc5d28d24316f77f73eadce30fe6e4ed5bad8"
+    },
+    {
+      "path": "02_UX_UI/frontend_mockup_v1.3.html",
+      "size_bytes": 23488,
+      "sha256": "aeb23eb0a1042f0a41e3aab3134d53c1a5478f023e2659898fd5898e7847661a"
+    },
+    {
+      "path": "03_SOURCE_REFERENCES/FS 02-04 Audcampo - Rev 02 13-07-21.xlsx",
+      "size_bytes": 50824,
+      "sha256": "a6d74bca956ecdc286de295e68981fcd4587f8f1dbcfeb6e94d250e7518a0e31"
+    },
+    {
+      "path": "03_SOURCE_REFERENCES/FS 13-01 - Permissão de Trabalho (PT ) Rev.00 PT.docx",
+      "size_bytes": 53258,
+      "sha256": "4f81bed4fcba195341f2e3218e1f4b7034b66e56702f88d6a44e9db3fd25a177"
+    },
+    {
+      "path": "03_SOURCE_REFERENCES/MODELO - PEDIDO RETIRADA DE RESÍDUO.doc",
+      "size_bytes": 45568,
+      "sha256": "2ebda1473c9c18a3aeb9ddaa368c5d06f51fa3f917c002e94a191b50b0990387"
+    },
+    {
+      "path": "03_SOURCE_REFERENCES/PT_FS13-01_Rev05_PROPOSTA_MELHORADA.docx",
+      "size_bytes": 62290,
+      "sha256": "6e602757361fe7be528ecb2c3e9c200f3b3f22e68f38cc7cb6d3f94022d7b581"
+    },
+    {
+      "path": "03_SOURCE_REFERENCES/REFERENCE_NOTES.md",
+      "size_bytes": 1626,
+      "sha256": "6c3c674538864c3c67814f05456d53d820a3d933e9ea5b6a2e356f296f64efcc"
+    },
+    {
+      "path": "03_SOURCE_REFERENCES/Relatorio_Melhorias_PT_FS13-01_Rev05.md",
+      "size_bytes": 24096,
+      "sha256": "ef838b67f6fd7fae04a971573a76c12214c37dffc917ea9676345caae5169111"
+    },
+    {
+      "path": "03_SOURCE_REFERENCES/audcampo_frente.png",
+      "size_bytes": 1372419,
+      "sha256": "1046b1b490abbf88056130b5104d8760f8c9c2a69f44b87b2f4423344d844c7d"
+    },
+    {
+      "path": "03_SOURCE_REFERENCES/audcampo_verso.png",
+      "size_bytes": 214694,
+      "sha256": "8ee0698f0fa4d825b8100a33da3e79db587f9a0522c38d2d8037ddd928dd6504"
+    },
+    {
+      "path": "04_FUTURE_NOT_IMPLEMENTED/SUGESTOES_PENDENTES_v1.3.md",
+      "size_bytes": 866,
+      "sha256": "2fa7c262700f08c052079dd2dc67c2052899851aadd86567513e96d6f41f2980"
+    },
+    {
+      "path": "05_MACHINE_READABLE/manifest.json",
+      "size_bytes": 5358,
+      "sha256": "a824a0b8e447706d46d74dadd0c4959c29ef6262d77512c8185ba0be479340db"
+    },
+    {
+      "path": "05_MACHINE_READABLE/module_map.json",
+      "size_bytes": 1164,
+      "sha256": "0126f363115006cb6c46b7d46b471eecfee4e6772a275b75f1c78da783c05709"
+    },
+    {
+      "path": "05_MACHINE_READABLE/precedence.json",
+      "size_bytes": 367,
+      "sha256": "5d12e1e1c148230dd9bf4430eec98bf438177b109bd4a2f1de3ffd89ed650245"
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 1809,
+      "sha256": "45b9aa145e473a4d157a7d4b7225b703cc04cab81c775ce50653c150db1bb919"
+    }
+  ]
+}

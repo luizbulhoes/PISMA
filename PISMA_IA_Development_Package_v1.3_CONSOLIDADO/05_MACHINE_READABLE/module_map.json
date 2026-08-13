@@ -1,0 +1,39 @@
+{
+  "product": "PISMA - Plataforma Integrada de Segurança e Meio Ambiente",
+  "version": "1.3",
+  "canonical_spec": "01_CANONICAL_SPEC/PISMA_PRD_v1.3.md",
+  "modules": [
+    "IAM/Obras/Usuários",
+    "Assinatura Eletrônica Interna",
+    "Ficha do Técnico",
+    "Treinamentos/ASO",
+    "EPI e Termos",
+    "Matriz de Competência",
+    "Equipamentos/TAG/Certificados/Checklists",
+    "Documentos e Procedimentos",
+    "Mural de Avisos",
+    "GRO/PGR/Inventário de Riscos/Plano de Ação",
+    "APR Digital",
+    "Permissão de Trabalho Digital",
+    "Painel Operacional",
+    "Audicamp",
+    "Inspeções Digitais",
+    "PAC - Plano Ação Corretiva",
+    "RA/RQA",
+    "PREA",
+    "Gestão de Resíduos",
+    "Solicitação de Retirada de Resíduos",
+    "Dashboards/KPIs",
+    "PWA Offline Controlado",
+    "Terceiros/Contratadas opcional",
+    "Auditoria/Relatórios"
+  ],
+  "deferred": [
+    "DDS/Reunião Pré-Tarefa",
+    "Gestão ampliada de emergências e resgate",
+    "Integração automática CAT/eSocial",
+    "QR Code operacional",
+    "Copiloto de IA"
+  ],
+  "core_rule": "O frontend orienta; o backend decide; o histórico não é reescrito."
+}

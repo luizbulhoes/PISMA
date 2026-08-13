@@ -1,0 +1,24 @@
+{
+  "name": "pisma",
+  "version": "1.3.0",
+  "private": true,
+  "description": "PISMA — Plataforma Integrada de Segurança e Meio Ambiente",
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @pisma/api --filter @pisma/web --filter @pisma/pdf-worker dev",
+    "dev:api": "pnpm --filter @pisma/api dev",
+    "dev:web": "pnpm --filter @pisma/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @pisma/api test:e2e",
+    "db:migrate": "pnpm --filter @pisma/api db:migrate",
+    "db:seed": "pnpm --filter @pisma/api db:seed",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

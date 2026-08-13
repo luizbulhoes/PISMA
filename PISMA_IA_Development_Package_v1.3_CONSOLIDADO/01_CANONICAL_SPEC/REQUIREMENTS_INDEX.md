@@ -1,0 +1,599 @@
+# Índice navegável do PRD PISMA v1.3
+
+> Gerado para facilitar a navegação de uma IA de desenvolvimento. O conteúdo normativo/funcional continua sendo o arquivo `PISMA_PRD_v1.3.md`.
+
+- L1: PISMA - Plataforma Integrada de Segurança e Meio Ambiente
+  - L2: PRD + Especificação Funcional, Técnica, de Segurança, UX/UI e Arquitetura
+  - L18: 0. Instrução principal para a IA de desenvolvimento
+- L37: 1. Visão do produto
+- L49: 2. Objetivos de negócio e segurança
+  - L51: 2.1 Objetivo principal
+  - L55: 2.2 Objetivos secundários
+- L85: 3. Base funcional derivada da PT Rev.05
+- L113: 4. Princípios obrigatórios do sistema
+  - L115: 4.1 Regra de bloqueio
+  - L133: 4.2 Integridade histórica
+  - L139: 4.3 Separação entre rascunho e documento submetido
+    - L143: Salvar rascunho
+    - L147: Finalizar e enviar para aprovação
+- L155: 5. Arquitetura de usuários e perfis
+  - L159: 5.1 MASTER
+  - L188: 5.2 TÉCNICO
+  - L261: 5.3 TST
+  - L324: 5.4 SUPERVISOR
+  - L352: 5.5 GESTOR
+    - L394: 5.5.1 Limite do poder de edição do Gestor
+    - L405: 5.5.2 Bloqueio operacional pelo Gestor
+- L436: 6. Matriz resumida de permissões
+- L482: 7. Cadastro da Obra
+  - L488: 7.1 Campos da Obra
+  - L508: 7.2 Isolamento lógico por Obra
+- L516: 8. Cadastro e primeiro acesso do usuário
+  - L518: 8.1 Criação pelo Master
+  - L530: 8.2 Primeiro acesso obrigatório
+    - L536: Etapa 1 - Troca de senha
+    - L542: Etapa 2 - Dados pessoais e funcionais
+    - L560: Etapa 3 - Ciência de privacidade
+    - L572: Etapa 4 - Cadastro da assinatura visual
+    - L587: Etapa 5 - Credencial exclusiva de assinatura
+    - L595: Etapa 6 - Selfie
+    - L605: Etapa 7 - Crachá frente
+    - L611: Etapa 8 - Crachá verso
+    - L615: Etapa 9 - Confirmação
+  - L619: 8.3 Validação de cadastro
+- L627: 8A. Ficha Digital do Técnico
+  - L631: 8A.1 Propriedade dos dados
+    - L635: Dados declarados/cadastrais
+    - L650: Dados de segurança e qualificação
+  - L665: 8A.2 Resumo visual da ficha
+  - L684: 8A.3 Treinamentos
+  - L703: 8A.4 ASO
+  - L716: 8A.5 Entrega de EPI
+  - L735: 8A.6 Alertas de validade
+  - L754: 8A.7 Regra de bloqueio por vencimento
+  - L767: 8A.8 Ficha de Informações do Técnico - impressão/PDF
+  - L796: 8A.9 Tela do TST - Técnicos
+  - L834: 8A.10 Tela do Gestor - gestão e bloqueios
+- L860: 8B. Módulo de Registro de Acidente (RA) e Registro de Quase Acidente (RQA)
+  - L869: 8B.1 Princípio central do módulo
+  - L885: 8B.2 Quem pode abrir RA/RQA
+  - L900: 8B.3 Numeração
+  - L922: 8B.4 Dados mínimos da abertura
+  - L949: 8B.5 Papéis dentro de um processo
+    - L953: Principal envolvido
+    - L966: Testemunha
+    - L979: TST
+    - L987: Gestor
+    - L994: Supervisor
+    - L998: Master
+  - L1004: 8B.6 Regra de acesso do Técnico
+  - L1020: 8B.7 Criação de participantes e solicitações
+  - L1035: 8B.8 Central de tarefas do Técnico
+  - L1058: 8B.9 Depoimento digital
+  - L1080: 8B.10 Revisão e assinatura do depoimento
+  - L1104: 8B.11 Imutabilidade do depoimento
+  - L1126: 8B.12 Evidências e documentos do processo
+  - L1163: 8B.13 Níveis de confidencialidade de anexos
+  - L1175: 8B.14 Documentos médicos e privacidade
+  - L1192: 8B.15 Linha do tempo do processo
+  - L1212: 8B.16 Análise do TST/Gestor
+  - L1235: 8B.17 Ações corretivas/preventivas
+  - L1251: 8B.18 Gatilho para Conclusão
+  - L1271: 8B.19 Conteúdo obrigatório da Conclusão
+  - L1293: 8B.20 Assinaturas obrigatórias da Conclusão
+  - L1312: 8B.21 Efeito de alteração durante as assinaturas
+  - L1321: 8B.22 Estado final e imutabilidade
+  - L1333: 8B.23 Novas informações após conclusão
+    - L1339: Aditivo pós-conclusão
+    - L1349: Reabrir investigação
+  - L1360: 8B.24 Máquina de estados RA/RQA
+  - L1383: 8B.25 Tela de lista RA/RQA para TST/Gestor
+  - L1408: 8B.26 Tela de detalhe RA/RQA
+    - L1412: Cabeçalho fixo
+    - L1424: Coluna principal
+    - L1437: Painel lateral
+  - L1446: 8B.27 Tela da testemunha
+  - L1467: 8B.28 Tela do principal envolvido
+  - L1480: 8B.29 Documento final RA/RQA em PDF
+  - L1506: 8B.30 Snapshot de metadados RA/RQA
+  - L1530: 8B.31 Integração com CAT/eSocial - governança
+  - L1551: 8B.32 Auditoria específica RA/RQA
+  - L1577: 8B.33 Banco de dados - entidades RA/RQA
+    - L1579: `occurrences`
+    - L1607: `occurrence_participants`
+    - L1619: `occurrence_tasks`
+    - L1632: `occurrence_statements`
+    - L1649: `occurrence_evidence`
+    - L1665: `occurrence_analysis_versions`
+    - L1675: `occurrence_actions`
+    - L1690: `occurrence_conclusions`
+    - L1711: `occurrence_conclusion_signatures`
+    - L1724: `occurrence_addenda`
+  - L1734: 8B.34 API RA/RQA
+  - L1766: 8B.35 Notificações RA/RQA
+  - L1780: 8B.36 Indicadores e relatórios RA/RQA
+  - L1802: 8B.37 Critérios de aceite RA/RQA
+  - L1827: 8B.38 Cenários E2E RA/RQA
+    - L1829: E2E-RA-01 - Acidente com principal envolvido e duas testemunhas
+    - L1833: E2E-RQA-02 - Testemunha tenta acessar processo
+    - L1837: E2E-RA-03 - Depoimento complementar
+    - L1841: E2E-RA-04 - Nova evidência após conclusão
+    - L1845: E2E-RA-05 - Conclusão alterada entre assinaturas
+    - L1849: E2E-RQA-06 - RQA sem principal envolvido definido
+  - L1853: 8B.39 Decisões de UX
+- L1866: 9. Modelo de Assinatura Eletrônica Interna - AEI
+  - L1868: 9.1 Objetivo
+  - L1880: 9.2 Terminologia obrigatória
+  - L1888: 9.3 Camadas da assinatura
+    - L1892: Camada A - identidade cadastrada
+    - L1903: Camada B - assinatura visual
+    - L1909: Camada C - reautenticação no ato de assinar
+    - L1915: Camada D - evidência criptográfica
+  - L1927: 9.4 Modelo recomendado de chave por usuário
+  - L1942: 9.5 Revogação e recadastro
+  - L1952: 9.6 Dados exibidos no PDF junto à assinatura
+- L1966: 10. Número da Ordem de Serviço como referência da PT
+  - L1970: 10.1 Regra de exibição
+  - L1976: 10.2 Identificador técnico
+  - L1980: 10.3 Reemissão
+- L1992: 11. Criação de uma nova PT - jornada do Técnico
+  - L1994: 11.1 Tela inicial "Nova PT"
+  - L2014: 11.2 Preenchimento em formato Wizard
+  - L2030: 11.3 Barra de ações fixa
+- L2044: 12. Etapa 1 - Emissão, escopo e validade
+  - L2065: 12.1 Natureza da atividade
+- L2083: 13. Etapa 2 - Descrição e condições impeditivas
+- L2098: 14. Etapa 3 - Documentos e pré-requisitos
+  - L2111: 14.1 Anexos
+- L2136: 15. Etapa 4 - Identificação de perigos e impactos
+- L2173: 16. Etapa 5 - Precauções obrigatórias para toda atividade
+- L2194: 17. Etapa 6 - LOTO / Energia Zero
+- L2214: 18. Módulos específicos por natureza da atividade
+  - L2218: 18.1 Trabalho a quente
+  - L2234: 18.2 Trabalho em altura
+  - L2249: 18.3 Içamento e movimentação de carga
+  - L2264: 18.4 Eletricidade
+  - L2280: 18.5 Escavações
+  - L2293: 18.6 Espaço confinado
+  - L2309: 18.7 Trabalho a frio / máquinas e ferramentas
+- L2315: 19. Etapa de controles ambientais
+- L2332: 20. Etapa EPI / EPC / recursos
+- L2364: 21. Ações corretivas e desvios
+- L2388: 22. Equipe executante e ciência
+  - L2402: 22.1 Usuário do sistema
+  - L2406: 22.2 Colaborador sem conta
+- L2418: 23. Revisão final antes da submissão
+- L2449: 24. Fluxo de aprovação
+  - L2451: 24.1 Slots obrigatórios
+  - L2460: 24.2 Combinações válidas
+  - L2467: 24.3 Combinações inválidas
+  - L2475: 24.4 Reprovação
+  - L2487: 24.5 Aprovação parcial
+- L2498: 25. Regra da única edição autorizada
+  - L2502: 25.1 Contador
+  - L2510: 25.2 Quando a edição pode ser usada
+  - L2516: 25.3 Regra recomendada de autorização
+  - L2525: 25.4 Efeito da autorização
+  - L2539: 25.5 Segunda necessidade de alteração
+- L2549: 26. Cancelamento e reemissão
+  - L2553: 26.1 Campos obrigatórios
+  - L2561: 26.2 Reemitir
+- L2576: 27. Início da execução
+- L2593: 28. Suspensão e revalidação
+  - L2597: 28.1 Suspensão
+  - L2618: 28.2 Revalidação
+- L2632: 29. Encerramento da PT
+- L2660: 30. Máquina de estados
+  - L2680: 30.1 Regras de transição
+- L2688: 31. Tela principal - conceito de comunicação com o usuário
+  - L2692: 31.1 Cabeçalho global
+  - L2706: 31.2 Menu lateral
+    - L2708: Técnico
+    - L2716: TST
+    - L2728: Supervisor
+    - L2738: Gestor
+    - L2751: Master
+- L2762: 32. Tabela de Permissões de Trabalho
+  - L2766: 32.1 Colunas recomendadas
+  - L2779: 32.2 Exemplo
+  - L2787: 32.3 Filtros
+  - L2802: 32.4 Status visual
+- L2819: 33. Tela de aprovação
+  - L2823: 33.1 Cabeçalho fixo
+  - L2835: 33.2 Coluna de conteúdo
+  - L2846: 33.3 Painel lateral de decisão
+- L2868: 34. Tela de Master - Usuários
+- L2899: 35. Tela de Auditoria
+- L2958: 35A. Novas telas de gestão de Técnicos - versão 1.1
+  - L2960: 35A.1 Técnico - Minha Ficha
+  - L2976: 35A.2 TST - Gestão de Técnicos
+  - L2987: 35A.3 TST/Gestor - Detalhe do Técnico
+  - L3013: 35A.4 Modais de cadastro
+    - L3015: Registrar treinamento
+    - L3027: Atualizar ASO
+    - L3037: Registrar entrega de EPI
+  - L3051: 35A.5 Gestor - Bloqueios
+  - L3072: 35A.6 Estados de validade
+- L3085: 36. Plano visual - Design System
+  - L3087: 36.1 Direção estética
+  - L3103: 36.2 Paleta recomendada
+  - L3121: 36.3 Tipografia
+  - L3140: 36.4 Grid
+  - L3148: 36.5 Componentes principais
+  - L3176: 36.6 Regras de botões
+- L3199: 37. Responsividade e uso em campo
+  - L3207: 37.1 Mobile
+  - L3217: 37.2 Condição de rede
+- L3230: 38. Acessibilidade
+- L3250: 39. Geração de PDF
+  - L3252: 39.1 Momentos de geração
+  - L3260: 39.2 Layout
+  - L3283: 39.3 Conteúdo
+  - L3301: 39.4 QR Code
+- L3321: 40. Arquivo de metadados
+- L3371: 41. Arquitetura técnica recomendada
+  - L3375: 41.1 Frontend
+  - L3391: 41.2 Backend
+  - L3405: 41.3 Banco de dados
+  - L3417: 41.4 Arquivos
+  - L3426: 41.5 Reverse proxy
+  - L3432: 41.6 Implantação
+- L3448: 42. Estrutura do banco de dados
+  - L3450: 42.1 Tabelas principais
+    - L3452: `works`
+    - L3466: `users`
+    - L3477: `user_profiles`
+    - L3493: `roles`
+    - L3501: `user_work_roles`
+    - L3510: `employee_trainings`
+    - L3530: `employee_aso_records`
+    - L3548: `ppe_deliveries`
+    - L3560: `ppe_delivery_items`
+    - L3570: `user_operational_blocks`
+    - L3588: `technician_profile_documents`
+    - L3599: `signature_credentials`
+    - L3612: `pt_templates`
+    - L3622: `pt_instances`
+    - L3639: `pt_versions`
+    - L3654: `pt_approvals`
+    - L3668: `pt_edit_authorizations`
+    - L3679: `pt_deviations`
+    - L3693: `pt_team_members`
+    - L3706: `files`
+    - L3718: `generated_documents`
+    - L3728: `audit_events`
+    - L3744: `sessions`
+- L3756: 43. Motor de templates e questionários
+- L3792: 44. API - contratos principais
+  - L3796: 44.1 Autenticação
+  - L3804: 44.2 Primeiro acesso
+  - L3813: 44.3 Obras
+  - L3821: 44.4 Usuários
+  - L3832: 44.5 PT
+  - L3849: 44.6 Aprovação
+  - L3855: 44.7 Edição
+  - L3862: 44.8 Ficha do Técnico / SST
+  - L3880: 44.9 Bloqueios operacionais
+  - L3888: 44.10 RA/RQA - Ocorrências
+  - L3892: 44.11 Auditoria
+- L3899: 45. Segurança da aplicação
+  - L3903: 45.1 Autenticação
+  - L3914: 45.2 Autorização
+  - L3931: 45.3 Proteção web
+  - L3947: 45.4 TLS
+  - L3953: 45.5 Auditoria resistente a alteração
+  - L3961: 45.6 Segredos
+- L3970: 46. Privacidade e LGPD
+  - L3984: 46.1 Princípio da necessidade
+  - L3994: 46.2 Biometria
+  - L4000: 46.3 Proteções
+  - L4012: 46.4 Dados de ASO, treinamento e EPI
+  - L4024: 46.5 RA/RQA, depoimentos e documentos médicos
+  - L4039: 46.6 Perfil excluído versus desativado
+- L4052: 47. Assinatura e validade documental - nota de governança
+- L4062: 48. Gerenciamento de documentos e versões
+  - L4064: 48.1 Imutabilidade lógica
+  - L4072: 48.2 Hashes
+  - L4081: 48.3 Comparação de versões
+- L4095: 49. Busca e desempenho
+- L4116: 50. Escala de referência
+- L4131: 51. Observabilidade
+  - L4133: 51.1 Logs de aplicação
+  - L4154: 51.2 Métricas
+  - L4170: 51.3 Health checks
+- L4180: 52. Backup, restauração e continuidade
+  - L4182: 52.1 Backup mínimo
+  - L4190: 52.2 Regras
+  - L4198: 52.3 RPO/RTO sugeridos
+- L4209: 53. Geração de notificações
+- L4240: 54. Relatórios e indicadores
+  - L4242: 54.1 Relatórios de PT - TST/Supervisor/Gestor
+  - L4257: 54.2 Relatórios de Técnicos - TST/Gestor
+  - L4274: 54.3 RA/RQA - TST/Gestor
+  - L4289: 54.4 Master
+- L4302: 55. Frontend - telas obrigatórias
+- L4353: 56. Comportamento do primeiro acesso - detalhes de UX
+- L4372: 57. Componente S/N/N/A
+- L4392: 58. Padrões de mensagens
+  - L4394: 58.1 Bloqueio
+  - L4398: 58.2 Edição única
+  - L4402: 58.3 Gestor assinando segundo slot
+  - L4406: 58.4 Cancelamento
+- L4412: 59. Requisitos de concorrência
+- L4424: 60. Requisitos de geração do snapshot
+- L4442: 61. Testes obrigatórios
+  - L4444: 61.1 Unitários
+  - L4459: 61.2 Integração
+  - L4477: 61.3 End-to-end
+    - L4481: Cenário E2E 1
+    - L4485: Cenário E2E 2
+    - L4489: Cenário E2E 3
+    - L4493: Cenário E2E 4
+    - L4497: Cenário E2E 5
+    - L4501: Cenário E2E 6
+    - L4505: Cenário E2E 7
+    - L4509: Cenário E2E 8
+    - L4513: Cenário E2E 9
+    - L4517: Cenário E2E 10
+    - L4523: Cenário E2E 11
+    - L4527: Cenário E2E 12
+    - L4531: Cenário E2E 13
+    - L4535: Cenário E2E 14
+    - L4539: Cenário E2E 15
+    - L4543: Cenário E2E 16
+    - L4547: Cenário E2E 17
+    - L4551: Cenário E2E 18
+    - L4555: Cenário E2E 19
+    - L4559: Cenário E2E 20
+    - L4563: Cenário E2E 21
+- L4569: 62. Segurança - critérios de aceite
+- L4591: 63. DevOps e entrega
+  - L4593: 63.1 Repositório
+  - L4616: 63.2 Ambientes
+  - L4624: 63.3 CI/CD
+- L4641: 64. Instalação em rede interna
+- L4660: 65. Critérios de aceite funcional do MVP
+- L4704: 66. Fases recomendadas
+  - L4706: Fase 0 - validação de processo
+  - L4714: Fase 1 - núcleo MVP
+  - L4730: Fase 2 - operação completa
+  - L4741: Fase 3 - maturidade
+- L4753: 67. Itens deliberadamente fora do escopo inicial
+- L4767: 68. Melhorias sugeridas além do pedido original
+- L4808: 69. Decisões que a empresa deverá validar antes da produção
+- L4834: 70. Modelo de história de usuário
+  - L4836: US-PT-001 - Criar PT
+    - L4842: Aceite
+  - L4852: US-PT-002 - Aprovar como TST
+    - L4858: Aceite
+  - L4868: US-PT-003 - Gestor assinar duas vezes
+    - L4874: Aceite
+  - L4884: US-PT-004 - Autorizar única edição
+    - L4890: Aceite
+  - L4902: US-PER-001 - Técnico imprimir própria ficha
+    - L4908: Aceite
+  - L4919: US-PER-002 - TST registrar treinamento
+    - L4925: Aceite
+  - L4935: US-PER-003 - TST registrar ASO
+    - L4941: Aceite
+  - L4949: US-PER-004 - TST registrar EPI
+    - L4955: Aceite
+  - L4964: US-PER-005 - Gestor bloquear tarefa
+    - L4970: Aceite
+- L4982: 71. Definition of Done
+- L5003: 72. Instrução de implementação para a IA
+- L5035: 73. Referências técnicas e normativas consideradas
+  - L5037: Documento corporativo de origem
+  - L5044: LGPD
+  - L5051: Assinaturas eletrônicas
+  - L5059: Comunicação de Acidente de Trabalho / eSocial
+  - L5066: Segurança da informação
+- L5078: 74. Reposicionamento do produto - PISMA
+  - L5080: 74.1 Nome oficial
+  - L5088: 74.2 Estrutura modular
+  - L5111: 74.3 Filosofia de uso
+- L5125: 75. Arquitetura de navegação v1.3
+  - L5127: 75.1 Menu do Técnico
+  - L5143: 75.2 Menu do TST
+  - L5166: 75.3 Menu do Supervisor
+  - L5181: 75.4 Menu do Gestor
+  - L5194: 75.5 Menu Master
+- L5208: 76. AR/APR Digital integrada à PT
+  - L5210: 76.1 Objetivo
+  - L5214: 76.2 Dois níveis para evitar burocracia excessiva
+    - L5216: A. AR Base / Biblioteca de Riscos
+    - L5231: B. APR da Tarefa
+  - L5237: 76.3 Estrutura mínima da APR
+  - L5260: 76.4 Matriz de risco
+  - L5274: 76.5 Integração APR -> PT
+  - L5287: 76.6 Aprovação proporcional ao risco
+  - L5295: 76.7 Estados
+- L5309: 77. GRO/PGR - Inventário de Riscos e Plano de Ação
+  - L5311: 77.1 Objetivo
+  - L5317: 77.2 Hierarquia de riscos
+  - L5325: 77.3 Registro de risco
+  - L5348: 77.4 Fontes automáticas de evidência
+  - L5366: 77.5 Plano de Ação do PGR
+  - L5377: 77.6 Controle de revisão
+  - L5388: 77.7 Exportações
+- L5400: 78. PAC - Plano Ação Corretiva
+  - L5402: 78.1 Princípio de simplicidade
+  - L5410: 78.2 Finalidade não disciplinar por padrão
+  - L5418: 78.3 Origens possíveis
+  - L5434: 78.4 Campos mínimos
+  - L5457: 78.5 Acesso
+  - L5464: 78.6 Fluxo leve
+- L5478: 79. AUDICAMP - Observação de Segurança, Desvio e Boa Prática
+  - L5480: 79.1 Origem do modelo
+  - L5484: 79.2 Quem pode registrar
+  - L5490: 79.3 Tipos de registro
+  - L5500: 79.4 Catálogo inicial derivado do FS 02-04
+    - L5502: A - Reação das Pessoas
+    - L5509: B - Falta de EPI ou Uso Inadequado
+    - L5519: C - Posicionamento Errado
+    - L5532: D - Ferramentas e Equipamentos Inadequados
+    - L5539: E - Falha de Procedimento
+    - L5545: F - Ambiente de Trabalho Inadequado
+  - L5555: 79.5 Campos do registro
+  - L5573: 79.6 Triagem TST/Gestor
+  - L5589: 79.7 Proteção contra uso punitivo automático
+- L5597: 80. Inspeções e Checklists Digitais
+  - L5599: 80.1 Biblioteca de modelos
+  - L5615: 80.2 Builder de perguntas
+  - L5640: 80.3 Execução
+- L5648: 81. Matriz Automática de Competência
+  - L5650: 81.1 Objetivo
+  - L5654: 81.2 Matriz configurável
+  - L5669: 81.3 Regra de bloqueio
+  - L5685: 81.4 Sem inferência automática indevida
+- L5691: 82. Gestão de EPI - Termo Eletrônico e Trocas
+  - L5693: 82.1 Acesso
+  - L5700: 82.2 Campos por item
+    - L5714: Tamanho aplicável
+  - L5725: 82.3 Troca de EPI
+  - L5735: 82.4 Termo eletrônico
+  - L5748: 82.5 Observação sobre EPC
+  - L5752: 82.6 Indicadores de consumo
+- L5766: 83. Gestão de Equipamentos, Ferramentas e Certificados
+  - L5768: 83.1 Quem cadastra
+  - L5778: 83.2 Cadastro do equipamento
+  - L5804: 83.3 Checklist do equipamento
+  - L5815: 83.4 Uso obrigatório na PT
+  - L5830: 83.5 Equipamento indisponível
+  - L5838: 83.6 Ferramentas sem TAG individual
+- L5844: 84. Gestão de Documentos e Procedimentos
+  - L5846: 84.1 Biblioteca controlada
+  - L5860: 84.2 Campos
+  - L5876: 84.3 Atualização gera aviso obrigatório
+  - L5895: 84.4 Uso na PT/APR
+- L5903: 85. Painel Operacional da Obra
+  - L5905: 85.1 Acesso
+  - L5911: 85.2 PTs exibidas
+  - L5920: 85.3 Tabela mínima obrigatória
+  - L5925: 85.4 Colunas adicionais recomendadas e já implementadas
+  - L5941: 85.5 Filtros
+  - L5953: 85.6 Sugestões de próxima evolução - não implementar sem aprovação
+- L5962: 86. RA/RQA - reforços da v1.3 e CAT
+  - L5964: 86.1 CAT obrigatória para conclusão de RA
+  - L5977: 86.2 Sugestões para tornar a investigação mais estruturada - PENDENTES DE APROVAÇÃO
+    - L5981: Sugestão A - Linha do tempo estruturada
+    - L5985: Sugestão B - Matriz de evidências
+    - L5989: Sugestão C - Análise de barreiras
+    - L5999: Sugestão D - 5 Porquês assistido
+    - L6003: Sugestão E - Fatores contribuintes padronizados
+    - L6007: Sugestão F - Árvore de causas / Ishikawa
+    - L6011: Sugestão G - Lições aprendidas
+    - L6015: Sugestão H - PAC integrado à investigação
+- L6021: 87. Dashboards Gerenciais
+  - L6023: 87.1 Acesso
+  - L6031: 87.2 PT
+  - L6043: 87.3 RA/RQA
+  - L6054: 87.4 AUDICAMP
+  - L6069: 87.5 PAC
+  - L6081: 87.6 Competência
+  - L6090: 87.7 EPI e EPC - apoio a compras
+  - L6101: 87.8 Resíduos e PREA
+- L6115: 88. PWA / Offline Controlado
+  - L6117: 88.1 Objetivo
+  - L6121: 88.2 Permitido offline
+  - L6133: 88.3 Proibido concluir offline
+  - L6147: 88.4 Segurança do cache
+- L6160: 89. Mural de Avisos, Notificações e Escalonamento
+  - L6162: 89.1 Mural individual
+  - L6177: 89.2 Regras iniciais
+  - L6193: 89.3 Sem excesso de alertas
+- L6199: 90. Gestão de Terceiros / Contratadas
+  - L6201: 90.1 Feature flag por contrato
+  - L6211: 90.2 Cadastro de empresa terceira
+  - L6223: 90.3 Trabalhadores terceiros
+- L6239: 91. PREA - Plano de Resposta a Emergências Ambientais
+  - L6241: 91.1 Abertura
+  - L6251: 91.2 Numeração
+  - L6259: 91.3 Campos mínimos
+  - L6279: 91.4 Campos adicionais dinâmicos
+  - L6294: 91.5 Integração automática com Gestão de Resíduos
+  - L6303: 91.6 Conclusão e dupla aprovação
+  - L6323: 91.7 Reprovação
+- L6329: 92. Gestão de Resíduos
+  - L6331: 92.1 Acesso
+  - L6339: 92.2 Fluxo da Solicitação de Retirada de Resíduos
+  - L6349: 92.3 Estrutura inspirada no modelo fornecido
+  - L6366: 92.4 Campos mínimos internos
+  - L6395: 92.5 Catálogo de tipos de resíduos perigosos
+  - L6409: 92.6 Pesagem e segregação
+  - L6415: 92.7 Resíduos provenientes de PREA
+- L6421: 93. Regra de Equipamentos na Abertura da PT
+  - L6425: 93.1 Pré-requisito
+  - L6431: 93.2 Checklist por TAG
+  - L6443: 93.3 Aprovação bloqueada
+- L6457: 94. Pesquisa, Seleção e Impressão em Lote de PTs
+  - L6459: 94.1 Pesquisa
+  - L6470: 94.2 Filtros obrigatórios
+  - L6482: 94.3 Seleção múltipla
+  - L6494: 94.4 PDF consolidado
+- L6505: 95. Banco de Dados - novas entidades v1.3
+  - L6509: `risk_analyses`
+  - L6524: `risk_analysis_versions`
+  - L6536: `risk_inventory_items`
+  - L6551: `risk_links`
+  - L6559: `corrective_action_plans`
+  - L6578: `audicamp_records`
+  - L6599: `inspection_templates`, `inspection_template_versions`, `inspection_instances`, `inspection_answers`
+  - L6603: `competency_rules`
+  - L6616: `equipment_assets`
+  - L6620: `equipment_checklist_runs`
+  - L6624: `controlled_documents`
+  - L6628: `notice_items`
+  - L6632: `environmental_emergencies`
+  - L6636: `waste_catalog`, `waste_lots`, `waste_removal_requests`, `waste_request_items`
+  - L6640: `contract_features`
+- L6651: 96. API - novas rotas v1.3
+  - L6655: AR/APR
+  - L6665: PGR
+  - L6673: PAC
+  - L6683: Audicamp
+  - L6691: Inspeções
+  - L6698: Competência
+  - L6704: EPI
+  - L6711: Equipamentos
+  - L6719: Documentos
+  - L6726: Painel
+  - L6730: PREA
+  - L6739: Resíduos
+  - L6749: Avisos
+- L6756: 97. Segurança, privacidade e governança dos novos módulos
+  - L6758: 97.1 PAC/Audicamp
+  - L6766: 97.2 PGR
+  - L6770: 97.3 EPI
+  - L6774: 97.4 Documentos
+  - L6778: 97.5 PREA e Resíduos
+  - L6782: 97.6 Offline
+- L6792: 98. Critérios de Aceite v1.3
+- L6834: 99. Casos E2E adicionais
+  - L6836: E2E-22 - APR integrada
+  - L6840: E2E-23 - Matriz de competência bloqueia
+  - L6844: E2E-24 - Equipamento obrigatório
+  - L6848: E2E-25 - Audicamp simples
+  - L6852: E2E-26 - Audicamp vira PAC
+  - L6856: E2E-27 - Procedimento atualizado
+  - L6860: E2E-28 - Termo de EPI
+  - L6864: E2E-29 - PREA
+  - L6868: E2E-30 - Gestor substitui TST no PREA
+  - L6872: E2E-31 - Resíduo PREA
+  - L6876: E2E-32 - Offline
+  - L6880: E2E-33 - RA sem CAT
+- L6886: 100. Itens explicitamente fora do escopo desta v1.3
+- L6905: 101. Referências específicas da v1.3
+  - L6907: 101.1 FS 02-04 AUDCAMPO
+  - L6926: 101.2 Solicitação de Retirada de Resíduo
+  - L6934: 101.3 NR-1 / GRO-PGR
+  - L6941: 101.4 EPI/CA
+  - L6946: 101.5 CAT
+  - L6950: 101.6 MTR/SINIR - referência futura/manual
+- L6958: 102. Ordem de implementação recomendada para a IA
+  - L6962: Onda 1 - núcleo preventivo
+  - L6971: Onda 2 - melhoria contínua
+  - L6979: Onda 3 - pessoas, documentos e comunicação
+  - L6987: Onda 4 - meio ambiente
+  - L6994: Onda 5 - mobilidade e endurecimento
+- L7005: 103. Conclusão v1.3
