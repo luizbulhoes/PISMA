@@ -8,6 +8,53 @@ import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
 type Apr = Record<string, unknown>;
 
+function listFromContent(value: unknown): string[] {
+  if (value == null || value === '') return [];
+  if (Array.isArray(value)) return value.flatMap((v) => listFromContent(v));
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[')) {
+      try {
+        return listFromContent(JSON.parse(trimmed));
+      } catch {
+        /* texto comum */
+      }
+    }
+    return trimmed
+      .split(/\r?\n|,/)
+      .map((s) => s.replace(/^["'\s]+|["'\s]+$/g, ''))
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function applicableNatureLabels(content: Record<string, unknown>): string[] {
+  const natures = (content.natures as Record<string, string>) ?? {};
+  return Object.entries(natures)
+    .filter(([, v]) => v === 'APPLICABLE')
+    .map(([k]) => ACTIVITY_NATURES.find((n) => n.code === k)?.label ?? k);
+}
+
+function AprItems({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="apr-panel">
+      <h4>{title}</h4>
+      {items.length === 0 ? (
+        <p className="muted" style={{ margin: 0 }}>
+          Nenhum item informado.
+        </p>
+      ) : (
+        <ul className="apr-list">
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function AprPage() {
   const { token, user } = useAuth();
   const [items, setItems] = useState<Apr[]>([]);
@@ -53,6 +100,12 @@ export function AprPage() {
     () => items.find((a) => fieldOf(a, 'id') === selectedId) ?? null,
     [items, selectedId],
   );
+  const selectedContent = ((selected?.content as Record<string, unknown>) ?? {});
+  const selectedNatures = applicableNatureLabels(selectedContent);
+  const selectedLocation =
+    fieldOf(selectedContent, 'area') !== '—'
+      ? fieldOf(selectedContent, 'area')
+      : fieldOf(selected ?? {}, 'area', 'location');
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -117,20 +170,25 @@ export function AprPage() {
     const w = window.open('', '_blank');
     if (!w) return;
     const content = (apr.content as Record<string, unknown>) ?? {};
-    const natures = (content.natures as Record<string, string>) ?? {};
-    const applicable = Object.entries(natures)
-      .filter(([, v]) => v === 'APPLICABLE')
-      .map(([k]) => ACTIVITY_NATURES.find((n) => n.code === k)?.label ?? k)
-      .join(', ');
-    w.document.write(`<!doctype html><html><head><title>APR ${fieldOf(apr, 'title')}</title>
-      <style>body{font-family:Segoe UI,sans-serif;padding:24px;color:#0d3b2e}
-      h1{margin:0 0 8px}.muted{color:#5a6f67}.box{border:1px solid #dce8e2;padding:12px;border-radius:8px;margin-top:12px}</style>
+    const applicable = applicableNatureLabels(content).join(', ');
+    const hazards = listFromContent(content.hazards);
+    const controls = listFromContent(content.controls);
+    const listHtml = (items: string[]) =>
+      items.length === 0
+        ? '<p class="muted">Nenhum item informado.</p>'
+        : `<ul>${items
+            .map((i) => `<li>${i.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`)
+            .join('')}</ul>`;
+    w.document.write(`<!doctype html><html lang="pt-BR"><head><title>APR ${fieldOf(apr, 'title')}</title>
+      <style>body{font-family:Segoe UI,sans-serif;padding:24px;color:#0d3b2e;max-width:720px;margin:0 auto}
+      h1{margin:0 0 8px}.muted{color:#5a6f67}.box{border:1px solid #dce8e2;padding:14px 16px;border-radius:10px;margin-top:12px}
+      ul{margin:8px 0 0;padding-left:18px} li{margin:6px 0}</style>
       </head><body>
       <h1>APR — ${fieldOf(apr, 'title')}</h1>
       <div class="muted">Atividade: ${fieldOf(apr, 'activity')} · Situação: ${displayLabel(fieldOf(apr, 'status'))}</div>
       <div class="box"><b>Naturezas aplicáveis</b><div>${applicable || '—'}</div></div>
-      <div class="box"><b>Perigos</b><pre>${JSON.stringify(content.hazards ?? [], null, 2)}</pre></div>
-      <div class="box"><b>Controles</b><pre>${JSON.stringify(content.controls ?? [], null, 2)}</pre></div>
+      <div class="box"><b>Perigos</b>${listHtml(hazards)}</div>
+      <div class="box"><b>Controles</b>${listHtml(controls)}</div>
       <div class="box"><b>Assinaturas digitais</b><div class="muted">Registradas no sistema com credencial do usuário, data/hora e trilha de auditoria.</div></div>
       <script>window.print()</script></body></html>`);
     w.document.close();
@@ -327,22 +385,45 @@ export function AprPage() {
       </div>
 
       {selected ? (
-        <div className="card" style={{ marginBottom: 12 }}>
-          <h3 style={{ marginTop: 0 }}>{fieldOf(selected, 'title')}</h3>
-          <p className="muted">
-            {fieldOf(selected, 'activity')} · {displayLabel(fieldOf(selected, 'status'))}
-          </p>
-          <div style={{ marginBottom: 8 }}>
-            <b>Perigos</b>
-            <pre style={{ whiteSpace: 'pre-wrap' }}>
-              {JSON.stringify(((selected.content as Record<string, unknown>)?.hazards as unknown) ?? [], null, 2)}
-            </pre>
+        <div className="card apr-detail" style={{ marginBottom: 12 }}>
+          <div className="apr-detail-head">
+            <div>
+              <h3 style={{ margin: '0 0 6px' }}>{fieldOf(selected, 'title')}</h3>
+              <p className="muted" style={{ margin: 0 }}>
+                {fieldOf(selected, 'activity')}
+                {fieldOf(selected, 'area') !== '—' ? ` · ${fieldOf(selected, 'area')}` : ''}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="badge">{displayLabel(fieldOf(selected, 'status'))}</span>
+              <button type="button" className="btn btn-ghost" onClick={() => setSelectedId(null)}>
+                Fechar
+              </button>
+            </div>
           </div>
-          <div style={{ marginBottom: 8 }}>
-            <b>Controles</b>
-            <pre style={{ whiteSpace: 'pre-wrap' }}>
-              {JSON.stringify(((selected.content as Record<string, unknown>)?.controls as unknown) ?? [], null, 2)}
-            </pre>
+
+          {selectedLocation !== '—' ? (
+            <p className="muted" style={{ marginTop: 10 }}>
+              Local analisado: <b style={{ color: 'inherit' }}>{selectedLocation}</b>
+            </p>
+          ) : null}
+          <div className="apr-natures">
+            <span className="muted">Naturezas aplicáveis</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              {selectedNatures.length === 0 ? (
+                <span className="muted">Nenhuma natureza aplicável.</span>
+              ) : (
+                selectedNatures.map((n) => (
+                  <span key={n} className="badge">
+                    {n}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="apr-detail-grid">
+            <AprItems title="Perigos identificados" items={listFromContent(selectedContent.hazards)} />
+            <AprItems title="Controles" items={listFromContent(selectedContent.controls)} />
           </div>
 
           {isTechnician ? (

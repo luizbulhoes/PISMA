@@ -4,7 +4,7 @@
 **Versão:** 1.3  
 **Repositório canônico:** https://github.com/luizbulhoes/PISMA  
 **Fonte de requisitos:** `PISMA_IA_Development_Package_v1.3_CONSOLIDADO/01_CANONICAL_SPEC/PISMA_PRD_v1.3.md`  
-**Última atualização deste arquivo:** 2026-08-13 (PT assinatura do emissor, equipe e bloqueio em Não)
+**Última atualização deste arquivo:** 2026-08-13 (leitura da APR sem JSON)
 
 ---
 
@@ -20,6 +20,16 @@ Manter **sempre** o remoto `origin/main` alinhado ao trabalho local:
 Remote: `https://github.com/luizbulhoes/PISMA.git`
 
 ---
+
+### 2026-08-13 — Leitura da APR em layout amigável
+
+**Tipo:** melhoria de UX · **Status:** feito · **Git:** (push `main`)
+
+- Abrir APR deixa de exibir JSON cru de perigos/controles.
+- Painel com situação, local, naturezas em badges e listas de perigos e controles.
+- Impressão da APR usa o mesmo formato em lista.
+
+**Por quê:** o técnico precisa ler a APR como documento de campo, não como dump técnico.
 
 ### 2026-08-13 — PT: assinatura do emissor, equipe e bloqueio em Não
 
