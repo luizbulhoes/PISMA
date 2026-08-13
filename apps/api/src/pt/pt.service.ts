@@ -170,12 +170,53 @@ export class PtService {
       `SELECT * FROM pt_edit_authorizations WHERE pt_id = $1 ORDER BY created_at DESC`,
       [id],
     );
+    const current = versions.rows.find((v) => v.id === currentVersionId);
+    const answers = (current?.answers_jsonb as Record<string, unknown>) ?? {};
+    const checkins = (
+      await this.db.query(
+        `SELECT c.*, u.full_name, sc.visual_signature_file_id
+         FROM pt_checkins c
+         JOIN users u ON u.id = c.user_id
+         LEFT JOIN signature_credentials sc ON sc.id = c.signature_credential_id
+         WHERE c.pt_id = $1 ORDER BY c.checked_in_at`,
+        [id],
+      )
+    ).rows;
+    const issuer = await this.db.query<{ full_name: string }>(
+      `SELECT full_name FROM users WHERE id = $1`,
+      [res.rows[0].created_by],
+    );
+    const approvalsEnriched = await Promise.all(
+      (approvals as Array<Record<string, unknown>>).map(async (a) => {
+        const sig = await this.db.query(
+          `SELECT visual_signature_file_id FROM signature_credentials WHERE id = $1`,
+          [a.signature_credential_id],
+        );
+        const signer = await this.db.query<{ full_name: string }>(
+          `SELECT full_name FROM users WHERE id = $1`,
+          [a.signer_user_id],
+        );
+        return {
+          ...a,
+          signer_name: signer.rows[0]?.full_name,
+          visual_signature_file_id: sig.rows[0]?.visual_signature_file_id ?? null,
+        };
+      }),
+    );
     return {
       ...res.rows[0],
+      answers,
+      description: answers.description ?? null,
+      nature: answers.natures ?? answers.nature ?? null,
+      natures: answers.natures ?? null,
+      hazards: answers.hazards ?? null,
+      os: res.rows[0].os_number,
+      issuerName: issuer.rows[0]?.full_name ?? null,
       versions: versions.rows,
-      approvals,
+      approvals: approvalsEnriched,
       team,
       equipment,
+      checkins,
       editAuthorizations: editAuths.rows,
     };
   }
@@ -503,7 +544,7 @@ export class PtService {
       reason?: string;
       pin: string;
       documentHash?: string;
-      expectedVersionId: string;
+      expectedVersionId?: string;
     },
   ) {
     if (!canActAsApprovalSlot(user.role as Role, input.slot)) {
@@ -513,7 +554,8 @@ export class PtService {
       throw new ForbiddenException('Técnico não aprova PT');
     }
     const pt = await this.get(user, id);
-    if (pt.current_version_id !== input.expectedVersionId) {
+    const expectedVersionId = input.expectedVersionId ?? pt.current_version_id;
+    if (pt.current_version_id !== expectedVersionId) {
       throw new ConflictException({
         code: 'VERSION_CONFLICT',
         currentVersionId: pt.current_version_id,
@@ -856,5 +898,126 @@ export class PtService {
       [workId],
     );
     return { items: res.rows };
+  }
+
+  async checkIn(user: AuthUser, id: string, pin: string) {
+    if (user.role !== 'TECHNICIAN') {
+      throw new ForbiddenException('Somente Técnico faz check-in na PT');
+    }
+    const pt = await this.get(user, id);
+    if (!['APPROVED', 'IN_EXECUTION'].includes(pt.status)) {
+      throw new BadRequestException('PT ainda não autorizada para check-in');
+    }
+    const team = (pt.team as Array<{ linked_user_id?: string }>) ?? [];
+    const invited =
+      pt.created_by === user.userId ||
+      team.some((m) => m.linked_user_id === user.userId);
+    if (!invited) {
+      throw new ForbiddenException('Você não está incluído nesta PT');
+    }
+    const cred = await this.db.query<{ id: string; pin_hash: string }>(
+      `SELECT id, pin_hash FROM signature_credentials
+       WHERE user_id = $1 AND status = 'ACTIVE' ORDER BY created_at DESC LIMIT 1`,
+      [user.userId],
+    );
+    if (!cred.rowCount) throw new BadRequestException('Credencial de assinatura ausente');
+    const pinOk = await verifyPin(pin, cred.rows[0].pin_hash);
+    if (!pinOk) throw new ForbiddenException('PIN inválido');
+    const hash =
+      (pt.versions.find((v: { id: string }) => v.id === pt.current_version_id)
+        ?.snapshot_sha256 as string) ??
+      createHash('sha256').update(id).digest('hex');
+    await this.db.query(
+      `INSERT INTO pt_checkins (pt_id, user_id, signature_credential_id, document_hash)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (pt_id, user_id) DO UPDATE
+         SET signature_credential_id = EXCLUDED.signature_credential_id,
+             document_hash = EXCLUDED.document_hash,
+             checked_in_at = NOW()`,
+      [id, user.userId, cred.rows[0].id, hash],
+    );
+    await this.audit.append({
+      workId: this.workId(user),
+      userId: user.userId,
+      entityType: 'pt',
+      entityId: id,
+      action: 'PT_CHECKIN',
+      outcome: 'SUCCESS',
+    });
+    return this.get(user, id);
+  }
+
+  async printBundle(user: AuthUser, id: string) {
+    const pt = await this.get(user, id);
+    if (!['APPROVED', 'IN_EXECUTION', 'SUSPENDED', 'CLOSED'].includes(pt.status)) {
+      throw new BadRequestException('PT só pode ser impressa após autorização');
+    }
+    let apr: Record<string, unknown> | null = null;
+    const aprId = pt.risk_analysis_id ?? pt.answers?.linkedAprId;
+    if (aprId) {
+      const a = await this.db.query(`SELECT * FROM risk_analyses WHERE id = $1`, [aprId]);
+      if (a.rowCount) {
+        const vers = await this.db.query(
+          `SELECT * FROM risk_analysis_versions WHERE risk_analysis_id = $1
+           ORDER BY version_number DESC LIMIT 1`,
+          [aprId],
+        );
+        apr = { ...a.rows[0], content: vers.rows[0]?.content_jsonb ?? {} };
+      }
+    }
+    return { pt, apr, printedAt: new Date().toISOString() };
+  }
+
+  async applyAprLink(user: AuthUser, ptId: string, aprId: string) {
+    const pt = await this.get(user, ptId);
+    const apr = await this.db.query(
+      `SELECT a.*, v.content_jsonb
+       FROM risk_analyses a
+       LEFT JOIN risk_analysis_versions v ON v.id = a.current_version_id
+       WHERE a.id = $1 AND a.work_id = $2`,
+      [aprId, this.workId(user)],
+    );
+    if (!apr.rowCount) throw new NotFoundException('APR não encontrada');
+    const content = (apr.rows[0].content_jsonb as Record<string, unknown>) ?? {};
+    const aprNatures = (content.natures as Record<string, string>) ?? {};
+    const currentAnswers = { ...(pt.answers ?? {}) };
+    const lockedNatures: Record<string, string> = {
+      ...((currentAnswers.natures as Record<string, string>) ?? {}),
+    };
+    for (const [code, fill] of Object.entries(aprNatures)) {
+      if (fill === 'APPLICABLE') lockedNatures[code] = 'APPLICABLE';
+    }
+    const answers = {
+      ...currentAnswers,
+      linkedAprId: aprId,
+      natures: lockedNatures,
+      naturesLockedFromApr: Object.keys(aprNatures).filter(
+        (k) => aprNatures[k] === 'APPLICABLE',
+      ),
+      hazards: [
+        ...new Set([
+          ...(Array.isArray(currentAnswers.hazards)
+            ? (currentAnswers.hazards as string[])
+            : []),
+          ...(Array.isArray(content.hazards) ? (content.hazards as string[]) : []),
+        ]),
+      ],
+    };
+    await this.db.query(
+      `UPDATE pt_instances SET risk_analysis_id = $1, updated_at = NOW() WHERE id = $2`,
+      [aprId, ptId],
+    );
+    if (['DRAFT', 'EDIT_AUTHORIZED'].includes(pt.status)) {
+      await this.updateDraft(user, ptId, {
+        answers,
+        expectedVersionId: pt.current_version_id,
+      });
+    } else {
+      await this.db.query(
+        `UPDATE pt_versions SET answers_jsonb = $1::jsonb WHERE id = $2`,
+        [JSON.stringify(answers), pt.current_version_id],
+      );
+    }
+    return this.get(user, ptId);
   }
 }

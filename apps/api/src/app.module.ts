@@ -4,6 +4,7 @@ import { AliasesModule } from './aliases/aliases.module';
 import { AssetsModule } from './assets/assets.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { CatalogsModule } from './catalogs/catalogs.module';
 import { DashboardsModule } from './dashboards/dashboards.module';
 import { DatabaseModule } from './database/database.module';
 import { DocumentsModule } from './documents/documents.module';
@@ -43,6 +44,7 @@ import { WorksModule } from './works/works.module';
     EnvironmentModule,
     DashboardsModule,
     SyncModule,
+    CatalogsModule,
     AliasesModule,
   ],
   controllers: [HealthController],

@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { api } from './api';
 import { useAuth } from './auth';
+import { PROFILE_FIELD_LABELS } from './labels';
 
 const PRIVACY_VERSION = 'PISMA-PRIVACY-1.3';
 
@@ -22,13 +23,18 @@ export function FirstAccessPage() {
     employer: 'Empresa Demo PISMA',
   });
   const [pin, setPin] = useState({ pin: '', confirmPin: '' });
+  const [photos, setPhotos] = useState<{
+    selfie: File | null;
+    badge_front: File | null;
+    badge_back: File | null;
+  }>({ selfie: null, badge_front: null, badge_back: null });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.strokeStyle = '#0F2744';
+    ctx.strokeStyle = '#0d3b2e';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
 
@@ -64,19 +70,9 @@ export function FirstAccessPage() {
   if (!user) return <Navigate to="/login" replace />;
   if (user.firstLoginCompleted) return <Navigate to="/" replace />;
 
-  async function uploadPlaceholder(kind: 'selfie' | 'badge_front' | 'badge_back') {
-    const canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 240;
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#e8eef3';
-    ctx.fillRect(0, 0, 320, 240);
-    ctx.fillStyle = '#0F2744';
-    ctx.font = '16px sans-serif';
-    ctx.fillText(`DEMO ${kind}`, 90, 120);
-    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
+  async function uploadPhoto(kind: 'selfie' | 'badge_front' | 'badge_back', file: File) {
     const fd = new FormData();
-    fd.append('file', blob, `${kind}.png`);
+    fd.append('file', file, file.name);
     const res = await fetch('/api/v1/files/upload', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -138,9 +134,12 @@ export function FirstAccessPage() {
         });
       }
       if (step === 6) {
-        await uploadPlaceholder('selfie');
-        await uploadPlaceholder('badge_front');
-        await uploadPlaceholder('badge_back');
+        if (!photos.selfie || !photos.badge_front || !photos.badge_back) {
+          throw new Error('Envie selfie e crachá frente/verso');
+        }
+        await uploadPhoto('selfie', photos.selfie);
+        await uploadPhoto('badge_front', photos.badge_front);
+        await uploadPhoto('badge_back', photos.badge_back);
         await api('/first-access/complete', { method: 'POST', token });
         await refreshUser();
         return;
@@ -174,15 +173,16 @@ export function FirstAccessPage() {
           <>
             {(['fullName', 'cpf', 'employeeNumber', 'jobFunction', 'employer'] as const).map((k) => (
               <div key={k} style={{ marginBottom: 8 }}>
-                <label className="muted">{k}</label>
+                <label className="muted">{PROFILE_FIELD_LABELS[k]}</label>
                 <input
                   className="field"
                   value={String(profile[k])}
                   onChange={(e) => setProfile({ ...profile, [k]: e.target.value })}
+                  required={k === 'cpf' || k === 'fullName'}
                 />
               </div>
             ))}
-            <label className="muted">Ano nascimento</label>
+            <label className="muted">{PROFILE_FIELD_LABELS.birthYear}</label>
             <input
               className="field"
               type="number"
@@ -205,11 +205,12 @@ export function FirstAccessPage() {
 
         {step === 4 && (
           <>
+            <p className="muted">Desenhe sua assinatura visual — ela aparece nos documentos assinados.</p>
             <canvas
               ref={canvasRef}
               width={480}
               height={180}
-              style={{ width: '100%', border: '1px solid #cbd5df', borderRadius: 8, touchAction: 'none', background: '#fff' }}
+              style={{ width: '100%', border: '1px solid #b7cfc4', borderRadius: 8, touchAction: 'none', background: '#fff' }}
             />
             <button
               type="button"
@@ -237,10 +238,39 @@ export function FirstAccessPage() {
         )}
 
         {step === 6 && (
-          <p className="muted">
-            Em ambiente demo, selfie e crachá frente/verso serão gerados como imagens placeholder
-            para concluir o cadastro. Em produção, use câmera/upload real.
-          </p>
+          <>
+            <p className="muted">
+              Identidade local: selfie + CPF já informado + foto frente e verso do crachá. Esses
+              dados vinculam a assinatura digital ao usuário.
+            </p>
+            <label className="muted">Selfie</label>
+            <input
+              className="field"
+              type="file"
+              accept="image/*"
+              capture="user"
+              required
+              onChange={(e) => setPhotos({ ...photos, selfie: e.target.files?.[0] ?? null })}
+            />
+            <div style={{ height: 8 }} />
+            <label className="muted">Crachá — frente</label>
+            <input
+              className="field"
+              type="file"
+              accept="image/*"
+              required
+              onChange={(e) => setPhotos({ ...photos, badge_front: e.target.files?.[0] ?? null })}
+            />
+            <div style={{ height: 8 }} />
+            <label className="muted">Crachá — verso</label>
+            <input
+              className="field"
+              type="file"
+              accept="image/*"
+              required
+              onChange={(e) => setPhotos({ ...photos, badge_back: e.target.files?.[0] ?? null })}
+            />
+          </>
         )}
 
         {error ? <div className="error">{error}</div> : null}

@@ -2,6 +2,7 @@ import { FormEvent, useState, useEffect } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
 import { api } from './api';
+import { roleLabel } from './labels';
 import { FirstAccessPage } from './FirstAccessPage';
 import {
   CompetencyPage,
@@ -26,6 +27,7 @@ import {
 } from './modules/occurrences';
 import { PreaPage } from './modules/prea';
 import { WastePage } from './modules/waste';
+import { CatalogsPage } from './modules/catalogs';
 
 function LoginPage() {
   const { login, user } = useAuth();
@@ -61,7 +63,7 @@ function LoginPage() {
           </div>
         </div>
         <h1 style={{ margin: '0 0 8px', fontSize: 24 }}>Acesso à plataforma</h1>
-        <p className="muted">Rede interna • autenticação por Obra e papel</p>
+        <p className="muted">Rede interna · autenticação por Obra e papel</p>
         <label className="muted">Usuário</label>
         <input className="field" value={username} onChange={(e) => setUsername(e.target.value)} />
         <div style={{ height: 10 }} />
@@ -106,7 +108,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="nav">
           {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end>
+            <NavLink key={l.to} to={l.to} end={l.to === '/'}>
               {l.label}
             </NavLink>
           ))}
@@ -119,7 +121,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             <b>Plataforma Integrada de Segurança e Meio Ambiente</b>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span className="badge">{user.role}</span>
+            <span className="badge">{roleLabel(user.role)}</span>
             <span className="muted">{user.fullName}</span>
             <button className="btn btn-ghost" onClick={() => void logout()}>
               Sair
@@ -132,88 +134,97 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** PRD §75 — Arquitetura de navegação v1.3 */
+/** Mural é a tela inicial de todos os papéis. */
 function menuForRole(role: string) {
+  const mural = { to: '/', label: 'Mural' };
+  const sync = { to: '/sync', label: 'Sync' };
+  const resumo = { to: '/resumo', label: 'Resumo' };
+
   if (role === 'TECHNICIAN') {
     return [
-      { to: '/', label: 'Resumo' },
+      mural,
       { to: '/pts/nova', label: 'Nova PT' },
       { to: '/pts', label: 'Minhas PTs' },
-      { to: '/apr', label: 'Minhas APRs' },
+      { to: '/apr', label: 'APRs' },
       { to: '/audicamp', label: 'Audicamp' },
-      { to: '/inspecoes', label: 'Minhas Inspeções' },
+      { to: '/inspecoes', label: 'Inspeções' },
       { to: '/ocorrencias', label: 'Minhas Ocorrências' },
-      { to: '/prea', label: 'PREA' },
+      { to: '/prea', label: 'Emergências Ambientais' },
       { to: '/residuos', label: 'Resíduos' },
       { to: '/ficha', label: 'Minha Ficha' },
       { to: '/documentos', label: 'Procedimentos' },
-      { to: '/avisos', label: 'Mural' },
-      { to: '/sync', label: 'Sync' },
+      resumo,
+      sync,
     ];
   }
   if (role === 'TST') {
     return [
-      { to: '/', label: 'Resumo SST/MA' },
+      mural,
       { to: '/pts', label: 'Aprovações / Painel PT' },
       { to: '/apr', label: 'AR/APR' },
       { to: '/pgr', label: 'GRO/PGR' },
       { to: '/pac', label: 'PAC' },
       { to: '/audicamp', label: 'Audicamp' },
       { to: '/inspecoes', label: 'Inspeções' },
+      { to: '/cadastros', label: 'Cadastros' },
       { to: '/tecnicos', label: 'Técnicos' },
       { to: '/competencia', label: 'Competências' },
       { to: '/equipamentos', label: 'Equipamentos' },
       { to: '/documentos', label: 'Procedimentos' },
       { to: '/ocorrencias', label: 'Ocorrências RA/RQA' },
-      { to: '/prea', label: 'PREA' },
+      { to: '/prea', label: 'Emergências Ambientais' },
       { to: '/residuos', label: 'Resíduos' },
-      { to: '/avisos', label: 'Mural' },
-      { to: '/sync', label: 'Sync' },
+      { to: '/resumo', label: 'Resumo SST/MA' },
+      sync,
     ];
   }
   if (role === 'SUPERVISOR') {
     return [
-      { to: '/', label: 'Resumo' },
+      mural,
       { to: '/pts', label: 'Aprovações / Painel PT' },
+      { to: '/apr', label: 'AR/APR' },
+      { to: '/cadastros', label: 'Cadastros' },
       { to: '/equipamentos', label: 'Equipamentos' },
-      { to: '/prea', label: 'PREA' },
+      { to: '/inspecoes', label: 'Inspeções' },
+      { to: '/prea', label: 'Emergências Ambientais' },
       { to: '/documentos', label: 'Procedimentos' },
-      { to: '/avisos', label: 'Mural' },
-      { to: '/sync', label: 'Sync' },
+      resumo,
+      sync,
     ];
   }
   if (role === 'MANAGER') {
     return [
-      { to: '/', label: 'Resumo executivo' },
+      mural,
       { to: '/pts', label: 'Aprovações / Painel PT' },
       { to: '/apr', label: 'AR/APR' },
       { to: '/pgr', label: 'GRO/PGR' },
       { to: '/pac', label: 'PAC' },
       { to: '/audicamp', label: 'Audicamp' },
       { to: '/inspecoes', label: 'Inspeções' },
+      { to: '/cadastros', label: 'Cadastros' },
       { to: '/tecnicos', label: 'Técnicos' },
       { to: '/competencia', label: 'Competências' },
       { to: '/equipamentos', label: 'Equipamentos' },
       { to: '/documentos', label: 'Procedimentos' },
       { to: '/ocorrencias', label: 'Ocorrências RA/RQA' },
-      { to: '/prea', label: 'PREA' },
+      { to: '/prea', label: 'Emergências Ambientais' },
       { to: '/residuos', label: 'Resíduos' },
-      { to: '/avisos', label: 'Mural' },
-      { to: '/sync', label: 'Sync' },
+      { to: '/resumo', label: 'Resumo executivo' },
+      sync,
     ];
   }
-  // MASTER
   return [
-    { to: '/', label: 'Resumo' },
+    mural,
     { to: '/obras', label: 'Obras' },
     { to: '/usuarios', label: 'Usuários' },
     { to: '/tecnicos', label: 'Técnicos' },
     { to: '/competencia', label: 'Competência' },
+    { to: '/cadastros', label: 'Cadastros' },
     { to: '/equipamentos', label: 'Equipamentos' },
     { to: '/documentos', label: 'Procedimentos' },
     { to: '/auditoria', label: 'Auditoria' },
-    { to: '/avisos', label: 'Mural' },
-    { to: '/sync', label: 'Sync' },
+    resumo,
+    sync,
   ];
 }
 
@@ -229,13 +240,16 @@ function NoticesPage() {
 
   return (
     <>
-      <h1>Mural de Avisos</h1>
-      <div className="card">
+      <h1>Mural</h1>
+      <p className="muted">
+        Novidades e pontos de atenção da Obra. Esta é a tela inicial de todos os usuários.
+      </p>
+      <div className="card" style={{ marginTop: 12 }}>
         {items.length === 0 ? (
-          <p className="muted">Sem avisos.</p>
+          <p className="muted">Sem avisos no momento. Quando houver novidades, elas aparecem aqui.</p>
         ) : (
           items.map((n) => (
-            <div key={n.id} style={{ marginBottom: 12 }}>
+            <div key={n.id} style={{ marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid #dce8e2' }}>
               <b>
                 [{n.severity}] {n.title}
               </b>
@@ -324,9 +338,10 @@ function AppRoutes() {
         element={
           <Shell>
             <Routes>
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={<NoticesPage />} />
+              <Route path="/avisos" element={<Navigate to="/" replace />} />
+              <Route path="/resumo" element={<DashboardPage />} />
               <Route path="/sync" element={<SyncStatusPage />} />
-              <Route path="/avisos" element={<NoticesPage />} />
               <Route path="/auditoria" element={<AuditPage />} />
               <Route path="/usuarios" element={<UsersAdminPage />} />
               <Route path="/tecnicos" element={<TechniciansPage />} />
@@ -349,6 +364,7 @@ function AppRoutes() {
               <Route path="/ocorrencias/:id" element={<OccurrenceDetailPage />} />
               <Route path="/prea" element={<PreaPage />} />
               <Route path="/residuos" element={<WastePage />} />
+              <Route path="/cadastros" element={<CatalogsPage />} />
               <Route path="/obras" element={<WorksPlaceholder />} />
             </Routes>
           </Shell>

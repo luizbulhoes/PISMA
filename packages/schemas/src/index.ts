@@ -205,7 +205,7 @@ export const createRiskInventoryItemSchema = z.object({
   assessment: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const createPtSchema = z.object({
+const createPtBodySchema = z.object({
   osNumber: z.string().min(1).max(60),
   templateId: z.string().uuid().optional(),
   answers: z.record(z.string(), z.unknown()).default({}),
@@ -225,6 +225,45 @@ export const createPtSchema = z.object({
   maxValidityHours: z.number().int().positive().max(24).optional(),
 });
 
+/** Aceita payload canônico ou formulário web (os, naturezas, equipe…). */
+export const createPtSchema = z.preprocess((raw) => {
+  if (!raw || typeof raw !== 'object') return raw;
+  const b = raw as Record<string, unknown>;
+  if (typeof b.osNumber === 'string') return b;
+  const os = b.os ?? b.os_number;
+  if (typeof os !== 'string') return b;
+  const teamUserIds = Array.isArray(b.teamUserIds)
+    ? (b.teamUserIds as string[])
+    : [];
+  const aprId = (b.riskAnalysisId ?? b.aprId) as string | undefined;
+  return {
+    osNumber: os,
+    templateId: b.templateId,
+    riskAnalysisId: aprId,
+    maxValidityHours: b.maxValidityHours,
+    equipmentAssetIds: b.equipmentAssetIds,
+    answers: {
+      description: b.description,
+      natures: b.natures,
+      hazards: b.hazards,
+      precautions: b.precautions,
+      equipmentTags: b.equipmentTags,
+      locationId: b.locationId,
+      authorizeSignature: b.authorizeSignature,
+      linkedAprId: aprId,
+      ...(typeof b.answers === 'object' && b.answers
+        ? (b.answers as Record<string, unknown>)
+        : {}),
+    },
+    teamMembers: Array.isArray(b.teamMembers)
+      ? b.teamMembers
+      : teamUserIds.map((id) => ({
+          linkedUserId: id,
+          name: 'Técnico incluído',
+        })),
+  };
+}, createPtBodySchema);
+
 export const updatePtDraftSchema = z.object({
   answers: z.record(z.string(), z.unknown()),
   expectedVersionId: z.string().uuid(),
@@ -242,14 +281,20 @@ export const updatePtDraftSchema = z.object({
     .optional(),
 });
 
-export const ptApproveSchema = z.object({
+export const ptApproveSchema = z.preprocess((raw) => {
+  if (!raw || typeof raw !== 'object') return raw;
+  const b = { ...(raw as Record<string, unknown>) };
+  if (b.decision === 'APPROVE') b.decision = 'APPROVED';
+  if (b.decision === 'REJECT') b.decision = 'REJECTED';
+  return b;
+}, z.object({
   slot: ptApprovalSlotSchema,
   decision: z.enum(['APPROVED', 'REJECTED']),
   reason: z.string().max(500).optional(),
   pin: z.string().regex(/^\d{6}$/),
   documentHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
-  expectedVersionId: z.string().uuid(),
-});
+  expectedVersionId: z.string().uuid().optional(),
+}));
 
 export const ptEditAuthSchema = z.object({
   reason: z.string().min(5).max(500),
@@ -349,12 +394,27 @@ export const occurrenceConclusionSchema = z.object({
   openItems: z.string().max(4000).optional(),
 });
 
-export const createPreaSchema = z.object({
+export const createPreaSchema = z.preprocess((raw) => {
+  if (!raw || typeof raw !== 'object') return raw;
+  const b = raw as Record<string, unknown>;
+  if (b.content) return b;
+  return {
+    title: b.title,
+    location: b.location,
+    description: b.description,
+    content: {
+      waste: b.waste,
+      photos: b.photos,
+      locationId: b.locationId,
+      wasteCatalogIds: b.wasteCatalogIds,
+    },
+  };
+}, z.object({
   title: z.string().min(3).max(200),
   location: z.string().min(2).max(200),
   description: z.string().min(5).max(4000),
   content: z.record(z.string(), z.unknown()).default({}),
-});
+}));
 
 export const createWasteCatalogSchema = z.object({
   code: z.string().min(1).max(40),

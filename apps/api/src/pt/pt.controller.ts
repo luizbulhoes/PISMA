@@ -123,6 +123,21 @@ export class PtController {
     return this.pt.close(req.user, id);
   }
 
+  @Post('pts/:id/checkin')
+  @Roles('TECHNICIAN')
+  checkin(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+    @Body() body: { pin?: string },
+  ) {
+    return this.pt.checkIn(req.user, id, body.pin ?? '');
+  }
+
+  @Get('pts/:id/print-bundle')
+  printBundle(@Req() req: RequestWithUser, @Param('id') id: string) {
+    return this.pt.printBundle(req.user, id);
+  }
+
   @Get('operational-panel/active-pts')
   panel(@Req() req: RequestWithUser) {
     return this.pt.activePanel(req.user);

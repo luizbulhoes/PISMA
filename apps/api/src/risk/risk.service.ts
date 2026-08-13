@@ -23,8 +23,11 @@ export class RiskService {
   async listAnalyses(user: AuthUser) {
     const workId = this.workId(user);
     const res = await this.db.query(
-      `SELECT id, type, code, title, activity, status, created_at, current_version_id
-       FROM risk_analyses WHERE work_id = $1 ORDER BY created_at DESC`,
+      `SELECT a.id, a.type, a.code, a.title, a.activity, a.status, a.created_at,
+              a.current_version_id, v.content_jsonb AS content
+       FROM risk_analyses a
+       LEFT JOIN risk_analysis_versions v ON v.id = a.current_version_id
+       WHERE a.work_id = $1 ORDER BY a.created_at DESC`,
       [workId],
     );
     return { items: res.rows };
@@ -42,8 +45,10 @@ export class RiskService {
       content?: Record<string, unknown>;
     },
   ) {
-    if (!['TECHNICIAN', 'TST', 'MANAGER', 'MASTER'].includes(user.role ?? '')) {
-      throw new ForbiddenException();
+    if (!['TST', 'SUPERVISOR', 'MANAGER', 'MASTER'].includes(user.role ?? '')) {
+      throw new ForbiddenException(
+        'Somente TST, Supervisor ou Gestor podem cadastrar APR',
+      );
     }
     const workId = this.workId(user);
     const content = input.content ?? {};
@@ -176,6 +181,90 @@ export class RiskService {
       outcome: 'SUCCESS',
     });
     return res.rows[0];
+  }
+
+  async approveSlot(
+    user: AuthUser,
+    id: string,
+    slot: string,
+    pin: string,
+    decision: 'APPROVED' | 'REJECTED' = 'APPROVED',
+  ) {
+    const allowed = [
+      'TECHNICIAN_1',
+      'TECHNICIAN_2',
+      'TECHNICIAN_3',
+      'TECHNICIAN_4',
+      'MANAGER',
+    ];
+    if (!allowed.includes(slot)) {
+      throw new ForbiddenException('Slot de aprovação inválido');
+    }
+    if (slot === 'MANAGER' && !['MANAGER', 'MASTER'].includes(user.role ?? '')) {
+      throw new ForbiddenException('Somente Gestor assina o slot Gestor');
+    }
+    if (slot.startsWith('TECHNICIAN') && user.role !== 'TECHNICIAN' && user.role !== 'MASTER') {
+      throw new ForbiddenException('Somente Técnico assina slot de técnico');
+    }
+    const analysis = await this.getAnalysis(user, id);
+    const { verifyPin } = await import('@pisma/security');
+    const cred = await this.db.query<{ id: string; pin_hash: string }>(
+      `SELECT id, pin_hash FROM signature_credentials
+       WHERE user_id = $1 AND status = 'ACTIVE' ORDER BY created_at DESC LIMIT 1`,
+      [user.userId],
+    );
+    if (!cred.rowCount) throw new ForbiddenException('Credencial de assinatura ausente');
+    const pinOk = await verifyPin(pin, cred.rows[0].pin_hash);
+    if (!pinOk) throw new ForbiddenException('PIN inválido');
+    const hash = createHash('sha256')
+      .update(JSON.stringify(analysis.versions?.at?.(-1)?.content_jsonb ?? id))
+      .digest('hex');
+    await this.db.query(
+      `INSERT INTO risk_analysis_approvals
+        (risk_analysis_id, slot, signer_user_id, decision, signature_credential_id, document_hash)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (risk_analysis_id, slot) DO UPDATE
+         SET signer_user_id = EXCLUDED.signer_user_id,
+             decision = EXCLUDED.decision,
+             signature_credential_id = EXCLUDED.signature_credential_id,
+             document_hash = EXCLUDED.document_hash,
+             signed_at = NOW()`,
+      [id, slot, user.userId, decision, cred.rows[0].id, hash],
+    );
+    const approvals = await this.db.query(
+      `SELECT slot, decision FROM risk_analysis_approvals WHERE risk_analysis_id = $1`,
+      [id],
+    );
+    const managerOk = approvals.rows.some(
+      (a) => a.slot === 'MANAGER' && a.decision === 'APPROVED',
+    );
+    if (managerOk && decision === 'APPROVED') {
+      await this.db.query(
+        `UPDATE risk_analysis_versions SET approved_by = $1, approved_at = NOW()
+         WHERE id = $2`,
+        [user.userId, analysis.current_version_id],
+      );
+      await this.db.query(
+        `UPDATE risk_analyses SET status = 'APPROVED', updated_at = NOW() WHERE id = $1`,
+        [id],
+      );
+    }
+    return {
+      items: approvals.rows,
+      status: managerOk && decision === 'APPROVED' ? 'APPROVED' : analysis.status,
+    };
+  }
+
+  async listApprovals(user: AuthUser, id: string) {
+    await this.getAnalysis(user, id);
+    const res = await this.db.query(
+      `SELECT a.*, u.full_name AS signer_name
+       FROM risk_analysis_approvals a
+       JOIN users u ON u.id = a.signer_user_id
+       WHERE a.risk_analysis_id = $1 ORDER BY a.signed_at`,
+      [id],
+    );
+    return { items: res.rows };
   }
 
   async listInventory(user: AuthUser) {

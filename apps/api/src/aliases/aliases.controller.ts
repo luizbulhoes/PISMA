@@ -6,6 +6,7 @@ import {
   Post,
   Req,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
@@ -70,9 +71,32 @@ export class AliasesController {
         hazards: body.hazards ?? [],
         controls: body.controls ?? [],
         area: body.area,
+        locationId: body.locationId,
+        natures: body.natures ?? {},
+        technicianApproverIds: body.technicianApproverIds ?? [],
       },
     });
     return this.risk.createAnalysis(req.user, parsed);
+  }
+
+  @Post('apr/:id/approvals')
+  aprApprove(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+    @Body() body: { slot: string; pin: string; decision?: string },
+  ) {
+    return this.risk.approveSlot(
+      req.user,
+      id,
+      body.slot,
+      body.pin,
+      body.decision === 'REJECTED' ? 'REJECTED' : 'APPROVED',
+    );
+  }
+
+  @Get('apr/:id')
+  getApr(@Req() req: RequestWithUser, @Param('id') id: string) {
+    return this.risk.getAnalysis(req.user, id);
   }
 
   @Post('pgr/inventory')
@@ -98,12 +122,7 @@ export class AliasesController {
     @Param('id') id: string,
     @Body() body: { aprId: string },
   ) {
-    const pt = await this.pt.get(req.user, id);
-    await this.pt.updateDraft(req.user, id, {
-      answers: { ...(pt.answers ?? {}), linkedAprId: body.aprId },
-      expectedVersionId: pt.current_version_id,
-    });
-    return { ok: true, ptId: id, aprId: body.aprId };
+    return this.pt.applyAprLink(req.user, id, body.aprId);
   }
 
   @Post('pac/:id/evidence')
@@ -121,8 +140,34 @@ export class AliasesController {
   }
 
   @Post('waste')
-  createLot(@Req() req: RequestWithUser, @Body() body: unknown) {
-    return this.environment.createWasteLot(req.user, body as never);
+  async createLot(@Req() req: RequestWithUser, @Body() body: Record<string, unknown>) {
+    if (body.catalogId) {
+      return this.environment.createWasteLot(req.user, body as never);
+    }
+    // Compat: tipo/nome livre → cria/usa catálogo
+    const wasteType = String(body.wasteType ?? body.type ?? 'RESIDUO');
+    const catalog = await this.environment.listWasteCatalog(req.user);
+    let item = (catalog.items as Array<{ id: string; name: string; code: string }>).find(
+      (c) => c.name === wasteType || c.code === wasteType,
+    );
+    if (!item && ['TST', 'MANAGER', 'MASTER'].includes(req.user.role ?? '')) {
+      item = (await this.environment.createWasteCatalog(req.user, {
+        code: wasteType.slice(0, 20).toUpperCase().replace(/\s+/g, '_'),
+        name: wasteType,
+      })) as { id: string; name: string; code: string };
+    }
+    if (!item) {
+      throw new BadRequestException(
+        'Tipo de resíduo não cadastrado — solicite ao TST ou Gestor',
+      );
+    }
+    return this.environment.createWasteLot(req.user, {
+      catalogId: item.id,
+      quantity: Number(body.weightKg ?? body.quantity ?? 0),
+      unit: 'KG',
+      storageLocation: String(body.location ?? body.storageLocation ?? ''),
+      originArea: String(body.location ?? ''),
+    });
   }
 
   @Post('waste/removal-requests/:id/sign')

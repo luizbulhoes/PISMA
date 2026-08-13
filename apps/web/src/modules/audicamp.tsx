@@ -12,17 +12,16 @@ const TYPES = [
   { value: 'ENVIRONMENTAL', label: 'Ambiental' },
 ];
 
-const CATEGORIES = ['A', 'B', 'C', 'D', 'E', 'F'];
-
 export function AudicampPage() {
   const { token, user } = useAuth();
   const [items, setItems] = useState<Row[]>([]);
+  const [categories, setCategories] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [form, setForm] = useState({
     recordType: 'DEVIATION',
-    categoryCode: 'A',
-    subcategoryCode: 'A1',
+    categoryCode: '',
+    subcategoryCode: '',
     area: '',
     description: '',
   });
@@ -33,6 +32,12 @@ export function AudicampPage() {
       setError(null);
       const r = await api<unknown>('/audicamp', { token });
       setItems(emptyItems<Row>(r));
+      const c = await api<unknown>('/audicamp/categories', { token }).catch(() => ({ items: [] }));
+      const cats = emptyItems<Row>(c);
+      setCategories(cats);
+      if (cats[0] && !form.categoryCode) {
+        setForm((f) => ({ ...f, categoryCode: fieldOf(cats[0]!, 'code') }));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao carregar Audicamp');
       setItems([]);
@@ -51,14 +56,14 @@ export function AudicampPage() {
         token,
         body: JSON.stringify({
           ...form,
-          subcategoryCode: `${form.categoryCode}1`,
+          subcategoryCode: form.subcategoryCode || `${form.categoryCode}-1`,
         }),
       });
       setMsg('Registro Audicamp criado');
       setForm({
         recordType: 'DEVIATION',
-        categoryCode: 'A',
-        subcategoryCode: 'A1',
+        categoryCode: categories[0] ? fieldOf(categories[0], 'code') : '',
+        subcategoryCode: '',
         area: '',
         description: '',
       });
@@ -122,12 +127,14 @@ export function AudicampPage() {
           </select>
           <select
             className="field"
+            required
             value={form.categoryCode}
             onChange={(e) => setForm({ ...form, categoryCode: e.target.value })}
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                Categoria {c}
+            <option value="">Categoria…</option>
+            {categories.map((c) => (
+              <option key={fieldOf(c, 'id')} value={fieldOf(c, 'code')}>
+                {fieldOf(c, 'code')} — {fieldOf(c, 'name')}
               </option>
             ))}
           </select>
@@ -139,17 +146,22 @@ export function AudicampPage() {
             required
           />
         </div>
+        {categories.length === 0 ? (
+          <p className="muted">Nenhuma categoria cadastrada. Peça ao Gestor ou TST em Cadastros.</p>
+        ) : null}
         <div style={{ height: 8 }} />
         <textarea
           className="field"
           rows={3}
           required
-          placeholder="Descrição objetiva (sem linguagem de culpa)"
+          placeholder="Descrição objetiva, sem linguagem de culpa"
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
         />
         <div style={{ height: 8 }} />
-        <button className="btn btn-primary">Registrar</button>
+        <button className="btn btn-primary" disabled={categories.length === 0}>
+          Registrar
+        </button>
       </form>
 
       <div className="card">
@@ -163,7 +175,7 @@ export function AudicampPage() {
               <div
                 key={id}
                 style={{
-                  borderTop: '1px solid #e5e7eb',
+                  borderTop: '1px solid #dce8e2',
                   padding: '12px 0',
                   display: 'grid',
                   gap: 8,

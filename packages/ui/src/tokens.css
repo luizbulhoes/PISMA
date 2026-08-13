@@ -1,17 +1,17 @@
-/* Design tokens — PRD §36.2 */
+/* Design tokens — paleta SSTA (verde) */
 :root {
-  --pisma-primary-900: #0f2744;
-  --pisma-primary-700: #19436b;
-  --pisma-action-600: #1f6feb;
+  --pisma-primary-900: #0d3b2e;
+  --pisma-primary-700: #1a5c45;
+  --pisma-action-600: #1f7a54;
   --pisma-success-600: #18794e;
-  --pisma-warning-500: #d99a18;
+  --pisma-warning-500: #c98512;
   --pisma-danger-600: #c23b3b;
-  --pisma-neutral-900: #1d2939;
-  --pisma-neutral-600: #667085;
-  --pisma-neutral-200: #eaecf0;
-  --pisma-neutral-50: #f8fafc;
+  --pisma-neutral-900: #1a2e28;
+  --pisma-neutral-600: #5a6f67;
+  --pisma-neutral-200: #dce8e2;
+  --pisma-neutral-50: #f3f8f5;
   --pisma-white: #ffffff;
   --pisma-font: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --pisma-radius: 10px;
-  --pisma-shadow: 0 3px 14px #102a3b0a;
+  --pisma-shadow: 0 3px 14px #0d3b2e12;
 }

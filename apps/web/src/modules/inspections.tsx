@@ -15,7 +15,9 @@ export function InspectionsPage() {
   const [tplItems, setTplItems] = useState('Item 1\nItem 2');
   const [selectedTpl, setSelectedTpl] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const canManage = ['TST', 'MANAGER', 'MASTER'].includes(user?.role ?? '');
+  const canManage = ['TST', 'MANAGER', 'MASTER', 'SUPERVISOR'].includes(user?.role ?? '');
+  const [categories, setCategories] = useState<Row[]>([]);
+  const [categoryId, setCategoryId] = useState('');
 
   async function load() {
     try {
@@ -28,6 +30,8 @@ export function InspectionsPage() {
       if (tplOnly) setTemplates(emptyItems<Row>(tplOnly));
       const runOnly = await api<unknown>('/inspections/runs', { token }).catch(() => null);
       if (runOnly) setRuns(emptyItems<Row>(runOnly));
+      const cats = await api<unknown>('/inspections/categories', { token }).catch(() => null);
+      if (cats) setCategories(emptyItems<Row>(cats));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao carregar inspeções');
     }
@@ -77,7 +81,7 @@ export function InspectionsPage() {
     }
   }
 
-  const title = user?.role === 'TECHNICIAN' ? 'Minhas Inspeções / Tarefas' : 'Inspeções digitais';
+  const title = 'Inspeções';
 
   return (
     <>
@@ -88,6 +92,19 @@ export function InspectionsPage() {
       {canManage ? (
         <form className="card" onSubmit={createTemplate} style={{ marginBottom: 12 }}>
           <h3 style={{ marginTop: 0 }}>Novo modelo</h3>
+          <select
+            className="field"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            style={{ marginBottom: 8 }}
+          >
+            <option value="">Categoria…</option>
+            {categories.map((c) => (
+              <option key={fieldOf(c, 'id')} value={fieldOf(c, 'id')}>
+                {fieldOf(c, 'code')} — {fieldOf(c, 'name')}
+              </option>
+            ))}
+          </select>
           <input
             className="field"
             placeholder="Nome do modelo"

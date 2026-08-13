@@ -4,7 +4,7 @@
 **Versão:** 1.3  
 **Repositório canônico:** https://github.com/luizbulhoes/PISMA  
 **Fonte de requisitos:** `PISMA_IA_Development_Package_v1.3_CONSOLIDADO/01_CANONICAL_SPEC/PISMA_PRD_v1.3.md`  
-**Última atualização deste arquivo:** 2026-08-13
+**Última atualização deste arquivo:** 2026-08-13 (melhorias Perfil Técnico / UX SSTA)
 
 ---
 
@@ -18,6 +18,29 @@ Manter **sempre** o remoto `origin/main` alinhado ao trabalho local:
 4. Decisões pendentes de PO ficam em `docs/DECISION_REQUIRED.md` e são espelhadas aqui.
 
 Remote: `https://github.com/luizbulhoes/PISMA.git`
+
+---
+
+### 2026-08-13 — Melhorias Perfil Técnico / UX SSTA (lote operacional)
+
+**Tipo:** melhoria de produto · **Status:** feito · **Git:** (push `main`)
+
+- **Mural** passou a ser a tela inicial (`/`) de todos os papéis; Resumo ficou em `/resumo`.
+- **Paleta verde SSTA** em tokens UI + shell (sidebar, badges, fundos).
+- Papéis em português na UI (`Técnico`, `Gestor`, etc.) via `roleLabel` / `@pisma/domain`.
+- **PT — naturezas:** todas as 9 naturezas disponíveis; cada uma com Aplicável / Não aplicável (N/A indisponibiliza o item).
+- **PT — vínculo APR:** etapa inicial vincula APR existente; naturezas aplicáveis da APR são automarcadas e travadas.
+- **APR:** só TST / Supervisor / Gestor cadastram; define naturezas do local; aprovação até 4 técnicos + Gestor.
+- **Assinatura digital local:** cadastro inicial exige selfie + CPF + crachá frente/verso + assinatura visual + PIN; PT exige autorização de assinatura; aprovação e check-in usam PIN e registram assinatura no documento.
+- **Incluir técnicos + check-in:** equipe convidada faz check-in com assinatura após PT autorizada.
+- **Impressão PT + APR:** `GET /pts/:id/print-bundle` após autorização.
+- **Cadastros:** locais (Gestor/TST/Supervisor), categorias Audicamp (Gestor/TST), categorias Inspeções (Gestor/Supervisor/TST), tipos de resíduo (TST/Gestor) — tela `/cadastros` + migration `008`.
+- **Inspeções:** título unificado “Inspeções”; removido “Tarefas”.
+- **Emergências Ambientais:** título correto; PREA construído dentro; locais e tipos de resíduo cadastrados; fotos com upload + descrição; introdução no início do formulário.
+- **Resíduos:** tipo e local por lista cadastrada.
+- Revisão de placeholders com texto entre parênteses sem sentido.
+
+**Por quê:** alinhar o fluxo de campo do Técnico e a linguagem SSTA ao uso real em obra (múltiplas naturezas, APR como fonte de verdade, assinatura formal e cadastros mestres).
 
 ---
 
@@ -204,7 +227,8 @@ Template:
 | Data | Commit | Descrição |
 |---|---|---|
 | 2026-08-13 | `cd0319e` | Initial commit PISMA v1.3 (ondas 0–8) no GitHub |
-| 2026-08-13 | *(este)* | Adiciona `memory.md` e protocolo de sync contínuo |
+| 2026-08-13 | `6a076d3` | Adiciona `memory.md` e protocolo de sync contínuo |
+| 2026-08-13 | *(este)* | Melhorias Técnico/SSTA: Mural home, naturezas, APR, assinatura, cadastros, Emergências Ambientais |
 
 ---
 

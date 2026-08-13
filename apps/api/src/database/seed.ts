@@ -136,6 +136,10 @@ async function main() {
   const master = await client.query(`SELECT id FROM users WHERE username = 'master.demo'`);
   const tecnico = await client.query(`SELECT id FROM users WHERE username = 'tecnico.demo'`);
   const tst = await client.query(`SELECT id FROM users WHERE username = 'tst.demo'`);
+  const supervisor = await client.query(`SELECT id FROM users WHERE username = 'supervisor.demo'`);
+  const gestor = await client.query(`SELECT id FROM users WHERE username = 'gestor.demo'`);
+  const supervisorId = supervisor.rows[0].id as string;
+  const gestorId = gestor.rows[0].id as string;
   const existingNotice = await client.query(
     `SELECT 1 FROM notice_items WHERE work_id = $1 AND title = $2 LIMIT 1`,
     [workId, 'Ambiente de demonstração'],
@@ -484,6 +488,51 @@ async function main() {
        VALUES ($1,$2,$3,$4,$5,$6)
        ON CONFLICT (work_id, code) DO NOTHING`,
       [workId, w.code, w.name, w.hazardClass, w.unit, tstId],
+    );
+  }
+
+  const locations = [
+    { code: 'LOC-01', name: 'Área de Solda' },
+    { code: 'LOC-02', name: 'Subestação' },
+    { code: 'LOC-03', name: 'Pátio de Resíduos' },
+  ];
+  for (const loc of locations) {
+    await client.query(
+      `INSERT INTO work_locations (work_id, code, name, created_by)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (work_id, code) DO NOTHING`,
+      [workId, loc.code, loc.name, gestorId],
+    );
+  }
+
+  const audCats = [
+    { code: 'A', name: 'Reação das Pessoas' },
+    { code: 'B', name: 'EPI' },
+    { code: 'C', name: 'Posicionamento' },
+    { code: 'D', name: 'Ferramentas' },
+    { code: 'E', name: 'Procedimentos' },
+    { code: 'F', name: 'Ambiente' },
+  ];
+  for (const c of audCats) {
+    await client.query(
+      `INSERT INTO audicamp_categories (work_id, code, name, created_by)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (work_id, code) DO NOTHING`,
+      [workId, c.code, c.name, tstId],
+    );
+  }
+
+  const inspCats = [
+    { code: 'INSP-GERAL', name: 'Inspeção geral de área' },
+    { code: 'INSP-EPI', name: 'Inspeção de EPI' },
+    { code: 'INSP-EQP', name: 'Inspeção de equipamentos' },
+  ];
+  for (const c of inspCats) {
+    await client.query(
+      `INSERT INTO inspection_categories (work_id, code, name, created_by)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (work_id, code) DO NOTHING`,
+      [workId, c.code, c.name, supervisorId],
     );
   }
 

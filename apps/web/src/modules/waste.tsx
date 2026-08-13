@@ -10,10 +10,13 @@ export function WastePage() {
   const { token, user } = useAuth();
   const [lots, setLots] = useState<Row[]>([]);
   const [requests, setRequests] = useState<Row[]>([]);
+  const [catalog, setCatalog] = useState<Row[]>([]);
+  const [locations, setLocations] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [lot, setLot] = useState({ wasteType: '', weightKg: '', location: '' });
-  const [req, setReq] = useState({ lotIds: '' as string, notes: '' });
+  const [lot, setLot] = useState({ catalogId: '', weightKg: '', locationId: '' });
+  const [selectedLots, setSelectedLots] = useState<string[]>([]);
+  const [notes, setNotes] = useState('');
   const [pin, setPin] = useState('');
   const isManager = ['MANAGER', 'MASTER'].includes(user?.role ?? '');
 
@@ -24,6 +27,10 @@ export function WastePage() {
       setLots(emptyItems<Row>(w));
       const r = await api<unknown>('/waste/removal-requests', { token });
       setRequests(emptyItems<Row>(r));
+      const c = await api<unknown>('/waste/catalog', { token });
+      setCatalog(emptyItems<Row>(c));
+      const l = await api<unknown>('/locations', { token }).catch(() => ({ items: [] }));
+      setLocations(emptyItems<Row>(l));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao carregar resíduos');
       setLots([]);
@@ -38,17 +45,20 @@ export function WastePage() {
   async function createLot(e: FormEvent) {
     e.preventDefault();
     try {
+      const cat = catalog.find((x) => fieldOf(x, 'id') === lot.catalogId);
+      const loc = locations.find((x) => fieldOf(x, 'id') === lot.locationId);
       await api('/waste', {
         method: 'POST',
         token,
         body: JSON.stringify({
-          wasteType: lot.wasteType,
+          catalogId: lot.catalogId,
+          wasteType: cat ? fieldOf(cat, 'name') : undefined,
           weightKg: Number(lot.weightKg),
-          location: lot.location,
+          location: loc ? fieldOf(loc, 'name') : '',
         }),
       });
       setMsg('Lote registrado');
-      setLot({ wasteType: '', weightKg: '', location: '' });
+      setLot({ catalogId: '', weightKg: '', locationId: '' });
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao criar lote');
@@ -62,12 +72,13 @@ export function WastePage() {
         method: 'POST',
         token,
         body: JSON.stringify({
-          lotIds: req.lotIds.split(',').map((s) => s.trim()).filter(Boolean),
-          notes: req.notes,
+          lotIds: selectedLots,
+          notes,
         }),
       });
       setMsg('Solicitação de retirada criada');
-      setReq({ lotIds: '', notes: '' });
+      setSelectedLots([]);
+      setNotes('');
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha na solicitação');
@@ -92,7 +103,7 @@ export function WastePage() {
     <>
       <PageHead
         title="Gestão de Resíduos"
-        subtitle="Lotes, solicitação de retirada e assinatura do Gestor."
+        subtitle="Tipos e locais pré-cadastrados; lotes e retirada com assinatura do Gestor."
       />
       <Err error={error} />
       <Msg text={msg} />
@@ -100,28 +111,41 @@ export function WastePage() {
       <form className="card" onSubmit={createLot} style={{ marginBottom: 12 }}>
         <h3 style={{ marginTop: 0 }}>Novo lote</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          <input
+          <select
             className="field"
-            placeholder="Tipo de resíduo"
             required
-            value={lot.wasteType}
-            onChange={(e) => setLot({ ...lot, wasteType: e.target.value })}
-          />
+            value={lot.catalogId}
+            onChange={(e) => setLot({ ...lot, catalogId: e.target.value })}
+          >
+            <option value="">Tipo de resíduo…</option>
+            {catalog.map((c) => (
+              <option key={fieldOf(c, 'id')} value={fieldOf(c, 'id')}>
+                {fieldOf(c, 'code')} — {fieldOf(c, 'name')}
+              </option>
+            ))}
+          </select>
           <input
             className="field"
-            placeholder="Peso (kg)"
+            placeholder="Peso kg"
             type="number"
             step="0.01"
             required
             value={lot.weightKg}
             onChange={(e) => setLot({ ...lot, weightKg: e.target.value })}
           />
-          <input
+          <select
             className="field"
-            placeholder="Local / depósito"
-            value={lot.location}
-            onChange={(e) => setLot({ ...lot, location: e.target.value })}
-          />
+            required
+            value={lot.locationId}
+            onChange={(e) => setLot({ ...lot, locationId: e.target.value })}
+          >
+            <option value="">Local…</option>
+            {locations.map((l) => (
+              <option key={fieldOf(l, 'id')} value={fieldOf(l, 'id')}>
+                {fieldOf(l, 'code')} — {fieldOf(l, 'name')}
+              </option>
+            ))}
+          </select>
         </div>
         <div style={{ height: 8 }} />
         <button className="btn btn-primary">Registrar lote</button>
@@ -132,6 +156,7 @@ export function WastePage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
+              <th />
               <th align="left">ID</th>
               <th align="left">Tipo</th>
               <th align="left">Peso</th>
@@ -142,24 +167,38 @@ export function WastePage() {
           <tbody>
             {lots.length === 0 ? (
               <tr>
-                <td colSpan={5} className="muted">
+                <td colSpan={6} className="muted">
                   Nenhum lote.
                 </td>
               </tr>
             ) : (
-              lots.map((l) => (
-                <tr key={fieldOf(l, 'id')}>
-                  <td>
-                    <code>{fieldOf(l, 'id').slice(0, 8)}</code>
-                  </td>
-                  <td>{fieldOf(l, 'wasteType', 'waste_type', 'type')}</td>
-                  <td>{fieldOf(l, 'weightKg', 'weight_kg')} kg</td>
-                  <td>{fieldOf(l, 'location')}</td>
-                  <td>
-                    <span className="badge">{fieldOf(l, 'status')}</span>
-                  </td>
-                </tr>
-              ))
+              lots.map((l) => {
+                const id = fieldOf(l, 'id');
+                return (
+                  <tr key={id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedLots.includes(id)}
+                        onChange={() =>
+                          setSelectedLots((s) =>
+                            s.includes(id) ? s.filter((x) => x !== id) : [...s, id],
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <code>{id.slice(0, 8)}</code>
+                    </td>
+                    <td>{fieldOf(l, 'catalog_name', 'wasteType', 'waste_type', 'type')}</td>
+                    <td>{fieldOf(l, 'quantity', 'weightKg', 'weight_kg')} kg</td>
+                    <td>{fieldOf(l, 'storage_location', 'location')}</td>
+                    <td>
+                      <span className="badge">{fieldOf(l, 'status')}</span>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -167,23 +206,18 @@ export function WastePage() {
 
       <form className="card" onSubmit={requestRemoval} style={{ marginBottom: 12 }}>
         <h3 style={{ marginTop: 0 }}>Solicitar retirada</h3>
-        <input
-          className="field"
-          placeholder="IDs dos lotes (vírgula)"
-          required
-          value={req.lotIds}
-          onChange={(e) => setReq({ ...req, lotIds: e.target.value })}
-        />
-        <div style={{ height: 8 }} />
+        <p className="muted">Selecione os lotes na tabela acima.</p>
         <textarea
           className="field"
           rows={2}
           placeholder="Observações"
-          value={req.notes}
-          onChange={(e) => setReq({ ...req, notes: e.target.value })}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
         />
         <div style={{ height: 8 }} />
-        <button className="btn btn-primary">Solicitar</button>
+        <button className="btn btn-primary" disabled={selectedLots.length === 0}>
+          Solicitar ({selectedLots.length})
+        </button>
       </form>
 
       <div className="card">
@@ -192,7 +226,7 @@ export function WastePage() {
           <p className="muted">Nenhuma solicitação.</p>
         ) : (
           requests.map((r) => (
-            <div key={fieldOf(r, 'id')} style={{ borderTop: '1px solid #e5e7eb', padding: '10px 0' }}>
+            <div key={fieldOf(r, 'id')} style={{ borderTop: '1px solid #dce8e2', padding: '10px 0' }}>
               <b>Pedido {fieldOf(r, 'id').slice(0, 8)}</b>{' '}
               <span className="badge">{fieldOf(r, 'status')}</span>
               <div className="muted">{fieldOf(r, 'notes')}</div>

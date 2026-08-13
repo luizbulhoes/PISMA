@@ -1,5 +1,13 @@
 /** Papéis do sistema — PRD §5 */
 export { ROLES, type Role } from './roles';
+export {
+  ROLE_LABELS,
+  roleLabel,
+  ACTIVITY_NATURES,
+  defaultNaturesMap,
+  type ActivityNatureCode,
+  type NatureFill,
+} from './labels';
 
 /** Slots / estados / regras de PT */
 export {

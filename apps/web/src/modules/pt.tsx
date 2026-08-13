@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
+import { ACTIVITY_NATURES, defaultNaturesMap, roleLabel, type NatureFill } from '../labels';
 import { CriticalActionButton } from '../offline';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
@@ -17,6 +18,10 @@ const PRECAUTIONS = [
   'Proteção contra queda instalada',
   'Condições climáticas adequadas',
 ];
+
+function natureLabel(code: string) {
+  return ACTIVITY_NATURES.find((n) => n.code === code)?.label ?? code;
+}
 
 export function PtsPage() {
   const { token, user } = useAuth();
@@ -57,15 +62,8 @@ export function PtsPage() {
 
   async function printSelected() {
     if (selected.length === 0) return;
-    try {
-      await api('/pts/print', {
-        method: 'POST',
-        token,
-        body: JSON.stringify({ ids: selected }),
-      });
-      window.open(`/api/v1/pts/print?ids=${selected.join(',')}`, '_blank');
-    } catch {
-      window.print();
+    for (const id of selected) {
+      window.open(`/pts/${id}?print=1`, '_blank');
     }
   }
 
@@ -73,7 +71,7 @@ export function PtsPage() {
     <>
       <PageHead
         title={isTech ? 'Minhas PTs' : 'Painel operacional de PT'}
-        subtitle="Busca, filtros por data/equipe e impressão múltipla."
+        subtitle="Busca, filtros por data/equipe e impressão com APR."
         actions={
           <>
             {isTech && user?.canEmitPt ? (
@@ -118,7 +116,7 @@ export function PtsPage() {
               <th />
               <th align="left">Nº / OS</th>
               <th align="left">Descrição</th>
-              <th align="left">Natureza</th>
+              <th align="left">Naturezas</th>
               <th align="left">Status</th>
               <th align="left">Data</th>
               <th />
@@ -144,10 +142,17 @@ export function PtsPage() {
                       />
                     </td>
                     <td>
-                      <b>{fieldOf(pt, 'number', 'pt_number', 'os')}</b>
+                      <b>{fieldOf(pt, 'number', 'pt_number', 'os_number', 'os')}</b>
                     </td>
                     <td>{fieldOf(pt, 'description', 'title')}</td>
-                    <td>{fieldOf(pt, 'nature', 'activity_nature')}</td>
+                    <td className="muted" style={{ maxWidth: 180 }}>
+                      {typeof pt.nature === 'object' && pt.nature
+                        ? Object.entries(pt.nature as Record<string, string>)
+                            .filter(([, v]) => v === 'APPLICABLE')
+                            .map(([k]) => natureLabel(k))
+                            .join(', ') || '—'
+                        : fieldOf(pt, 'nature', 'activity_nature') || '—'}
+                    </td>
                     <td>
                       <span className="badge">{fieldOf(pt, 'status')}</span>
                     </td>
@@ -175,14 +180,20 @@ export function PtNewPage() {
   const [error, setError] = useState<string | null>(null);
   const [equipment, setEquipment] = useState<Row[]>([]);
   const [technicians, setTechnicians] = useState<Row[]>([]);
+  const [locations, setLocations] = useState<Row[]>([]);
+  const [aprs, setAprs] = useState<Row[]>([]);
+  const [lockedNatures, setLockedNatures] = useState<string[]>([]);
   const [form, setForm] = useState({
     os: '',
     description: '',
-    nature: 'ALTURA',
+    locationId: '',
+    aprId: '',
+    natures: defaultNaturesMap() as Record<string, NatureFill>,
     hazards: '',
     precautions: Object.fromEntries(PRECAUTIONS.map((p) => [p, 'NA' as 'YES' | 'NO' | 'NA'])),
     equipmentTags: [] as string[],
     teamUserIds: [] as string[],
+    authorizeSignature: false,
   });
 
   useEffect(() => {
@@ -192,7 +203,41 @@ export function PtNewPage() {
     void api<unknown>('/technicians', { token })
       .then((r) => setTechnicians(emptyItems<Row>(r)))
       .catch(() => setTechnicians([]));
+    void api<unknown>('/locations', { token })
+      .then((r) => setLocations(emptyItems<Row>(r)))
+      .catch(() => setLocations([]));
+    void api<unknown>('/apr', { token })
+      .then((r) => setAprs(emptyItems<Row>(r)))
+      .catch(() => setAprs([]));
   }, [token]);
+
+  async function onSelectApr(aprId: string) {
+    setForm((f) => ({ ...f, aprId }));
+    if (!aprId) {
+      setLockedNatures([]);
+      return;
+    }
+    const apr = aprs.find((a) => fieldOf(a, 'id') === aprId);
+    const content = (apr?.content as Record<string, unknown>) ?? {};
+    const aprNatures = (content.natures as Record<string, NatureFill>) ?? {};
+    const locked = Object.entries(aprNatures)
+      .filter(([, v]) => v === 'APPLICABLE')
+      .map(([k]) => k);
+    setLockedNatures(locked);
+    setForm((f) => {
+      const natures = { ...f.natures };
+      for (const code of locked) natures[code] = 'APPLICABLE';
+      const hazardsFromApr = Array.isArray(content.hazards)
+        ? (content.hazards as string[]).join('\n')
+        : '';
+      return {
+        ...f,
+        aprId,
+        natures,
+        hazards: [f.hazards, hazardsFromApr].filter(Boolean).join('\n'),
+      };
+    });
+  }
 
   if (user?.role !== 'TECHNICIAN') {
     return <Navigate to="/pts" replace />;
@@ -206,6 +251,11 @@ export function PtNewPage() {
         </div>
       </>
     );
+  }
+
+  function setNature(code: string, fill: NatureFill) {
+    if (lockedNatures.includes(code) && fill !== 'APPLICABLE') return;
+    setForm((f) => ({ ...f, natures: { ...f.natures, [code]: fill } }));
   }
 
   function toggleTag(tag: string) {
@@ -228,6 +278,10 @@ export function PtNewPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!form.authorizeSignature) {
+      setError('Autorize a assinatura digital para emitir a PT.');
+      return;
+    }
     try {
       setError(null);
       const created = await api<Row>('/pts', {
@@ -236,14 +290,24 @@ export function PtNewPage() {
         body: JSON.stringify({
           os: form.os,
           description: form.description,
-          nature: form.nature,
+          locationId: form.locationId || undefined,
+          aprId: form.aprId || undefined,
+          natures: form.natures,
           hazards: form.hazards.split('\n').filter(Boolean),
           precautions: form.precautions,
           equipmentTags: form.equipmentTags,
           teamUserIds: form.teamUserIds,
+          authorizeSignature: true,
         }),
       });
       const id = fieldOf(created, 'id');
+      if (form.aprId) {
+        await api(`/pts/${id}/apr`, {
+          method: 'POST',
+          token,
+          body: JSON.stringify({ aprId: form.aprId }),
+        }).catch(() => undefined);
+      }
       await api(`/pts/${id}/submit`, { method: 'POST', token }).catch(() => undefined);
       nav(`/pts/${id}`);
     } catch (err) {
@@ -251,7 +315,14 @@ export function PtNewPage() {
     }
   }
 
-  const steps = ['OS e descrição', 'Riscos e precauções', 'Equipamentos e equipe', 'Revisar'];
+  const steps = [
+    'APR, local e OS',
+    'Naturezas',
+    'Riscos e precauções',
+    'Equipe e assinatura',
+    'Revisar',
+  ];
+  const applicable = ACTIVITY_NATURES.filter((n) => form.natures[n.code] === 'APPLICABLE');
 
   return (
     <>
@@ -271,6 +342,39 @@ export function PtNewPage() {
       <form className="card" onSubmit={submit}>
         {step === 0 ? (
           <>
+            <label className="muted">Vincular APR existente</label>
+            <select
+              className="field"
+              value={form.aprId}
+              onChange={(e) => void onSelectApr(e.target.value)}
+            >
+              <option value="">Sem APR vinculada nesta etapa</option>
+              {aprs.map((a) => (
+                <option key={fieldOf(a, 'id')} value={fieldOf(a, 'id')}>
+                  {fieldOf(a, 'title', 'name')} — {fieldOf(a, 'status')}
+                </option>
+              ))}
+            </select>
+            <p className="muted" style={{ marginTop: 6 }}>
+              A APR define naturezas do local analisado: itens aplicáveis são automarcados e não
+              alteráveis.
+            </p>
+            <div style={{ height: 8 }} />
+            <label className="muted">Local de trabalho</label>
+            <select
+              className="field"
+              required
+              value={form.locationId}
+              onChange={(e) => setForm({ ...form, locationId: e.target.value })}
+            >
+              <option value="">Selecione o local…</option>
+              {locations.map((l) => (
+                <option key={fieldOf(l, 'id')} value={fieldOf(l, 'id')}>
+                  {fieldOf(l, 'code')} — {fieldOf(l, 'name')}
+                </option>
+              ))}
+            </select>
+            <div style={{ height: 8 }} />
             <label className="muted">Ordem de Serviço (OS)</label>
             <input
               className="field"
@@ -287,25 +391,58 @@ export function PtNewPage() {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
-            <div style={{ height: 8 }} />
-            <label className="muted">Natureza</label>
-            <select
-              className="field"
-              value={form.nature}
-              onChange={(e) => setForm({ ...form, nature: e.target.value })}
-            >
-              <option value="ALTURA">Trabalho em altura</option>
-              <option value="ELETRICA">Elétrica</option>
-              <option value="ESPACO_CONFINADO">Espaço confinado</option>
-              <option value="QUENTE">Trabalho a quente</option>
-              <option value="GERAL">Geral</option>
-            </select>
           </>
         ) : null}
 
         {step === 1 ? (
           <>
-            <label className="muted">Perigos identificados (um por linha)</label>
+            <p>
+              Um mesmo serviço pode exigir várias naturezas. Marque cada uma como{' '}
+              <b>Aplicável</b> ou <b>Não aplicável</b>. Itens N/A ficam indisponíveis para
+              preenchimento detalhado.
+            </p>
+            <div className="nature-grid">
+              {ACTIVITY_NATURES.map((n) => {
+                const locked = lockedNatures.includes(n.code);
+                const fill = form.natures[n.code];
+                return (
+                  <div key={n.code} className={`nature-row${locked ? ' locked' : ''}`}>
+                    <div>
+                      <b>{n.label}</b>
+                      {locked ? (
+                        <div className="muted">Definido pela APR — não alterável</div>
+                      ) : null}
+                    </div>
+                    <label>
+                      <input
+                        type="radio"
+                        name={`nat-${n.code}`}
+                        checked={fill === 'APPLICABLE'}
+                        disabled={locked}
+                        onChange={() => setNature(n.code, 'APPLICABLE')}
+                      />{' '}
+                      Aplicável
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        name={`nat-${n.code}`}
+                        checked={fill === 'NA'}
+                        disabled={locked}
+                        onChange={() => setNature(n.code, 'NA')}
+                      />{' '}
+                      Não aplicável
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+
+        {step === 2 ? (
+          <>
+            <label className="muted">Perigos identificados</label>
             <textarea
               className="field"
               rows={4}
@@ -313,7 +450,7 @@ export function PtNewPage() {
               onChange={(e) => setForm({ ...form, hazards: e.target.value })}
             />
             <div style={{ height: 12 }} />
-            <b>Precauções (Sim / Não / N/A)</b>
+            <b>Precauções — naturezas aplicáveis: {applicable.map((n) => n.label).join(', ') || 'nenhuma'}</b>
             {PRECAUTIONS.map((p) => (
               <div
                 key={p}
@@ -338,13 +475,9 @@ export function PtNewPage() {
                 ))}
               </div>
             ))}
-          </>
-        ) : null}
-
-        {step === 2 ? (
-          <>
+            <div style={{ height: 12 }} />
             <b>Equipamentos (TAG)</b>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '8px 0 16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '8px 0' }}>
               {equipment.length === 0 ? (
                 <span className="muted">Nenhum equipamento cadastrado.</span>
               ) : (
@@ -364,26 +497,52 @@ export function PtNewPage() {
                 })
               )}
             </div>
-            <b>Equipe</b>
-            <div style={{ marginTop: 8 }}>
-              {technicians.map((t) => {
-                const id = fieldOf(t, 'id');
-                return (
-                  <label key={id} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                    <input
-                      type="checkbox"
-                      checked={form.teamUserIds.includes(id)}
-                      onChange={() => toggleTeam(id)}
-                    />
-                    {fieldOf(t, 'full_name', 'fullName', 'name')}
-                  </label>
-                );
-              })}
-            </div>
           </>
         ) : null}
 
         {step === 3 ? (
+          <>
+            <b>Incluir técnicos na atividade</b>
+            <p className="muted">
+              Os técnicos incluídos receberão a PT e deverão fazer check-in com assinatura digital.
+            </p>
+            <div style={{ marginTop: 8 }}>
+              {technicians
+                .filter((t) => fieldOf(t, 'id') !== user.id)
+                .map((t) => {
+                  const id = fieldOf(t, 'id');
+                  return (
+                    <label key={id} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={form.teamUserIds.includes(id)}
+                        onChange={() => toggleTeam(id)}
+                      />
+                      {fieldOf(t, 'full_name', 'fullName', 'name')}
+                    </label>
+                  );
+                })}
+            </div>
+            <div className="signature-box" style={{ marginTop: 16 }}>
+              <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <input
+                  type="checkbox"
+                  checked={form.authorizeSignature}
+                  onChange={(e) => setForm({ ...form, authorizeSignature: e.target.checked })}
+                />
+                <span>
+                  <b>Autorizo a assinatura digital desta PT</b>
+                  <div className="muted">
+                    Usa a assinatura cadastrada no primeiro acesso (selfie, CPF e crachá). TST e
+                    Gestor/Supervisor também assinarão na autorização.
+                  </div>
+                </span>
+              </label>
+            </div>
+          </>
+        ) : null}
+
+        {step === 4 ? (
           <div>
             <p>
               <b>OS:</b> {form.os}
@@ -392,13 +551,17 @@ export function PtNewPage() {
               <b>Descrição:</b> {form.description}
             </p>
             <p>
-              <b>Natureza:</b> {form.nature}
+              <b>APR:</b> {form.aprId ? fieldOf(aprs.find((a) => fieldOf(a, 'id') === form.aprId) ?? {}, 'title', 'name') || form.aprId : '—'}
             </p>
             <p>
-              <b>TAGs:</b> {form.equipmentTags.join(', ') || '—'}
+              <b>Naturezas aplicáveis:</b>{' '}
+              {applicable.map((n) => n.label).join(', ') || 'nenhuma'}
             </p>
             <p>
-              <b>Equipe:</b> {form.teamUserIds.length} membro(s)
+              <b>Técnicos incluídos:</b> {form.teamUserIds.length}
+            </p>
+            <p>
+              <b>Assinatura autorizada:</b> {form.authorizeSignature ? 'Sim' : 'Não'}
             </p>
             <p className="muted">Ao confirmar, a PT será criada e submetida para aprovação.</p>
           </div>
@@ -414,7 +577,7 @@ export function PtNewPage() {
               Cancelar
             </Link>
           )}
-          {step < 3 ? (
+          {step < 4 ? (
             <button type="button" className="btn btn-primary" onClick={() => setStep((s) => s + 1)}>
               Continuar
             </button>
@@ -431,11 +594,13 @@ export function PtDetailPage() {
   const { id } = useParams();
   const { token, user } = useAuth();
   const [pt, setPt] = useState<Row | null>(null);
+  const [bundle, setBundle] = useState<Row | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [pin, setPin] = useState('');
-  const [activeSlot, setActiveSlot] = useState<'TST' | 'SUPERVISOR' | 'MANAGER' | null>(null);
+  const [activeSlot, setActiveSlot] = useState<'TST' | 'SUPERVISOR' | null>(null);
+  const [checkinPin, setCheckinPin] = useState('');
 
   const role = user?.role ?? '';
   const canApprove = ['TST', 'SUPERVISOR', 'MANAGER'].includes(role);
@@ -443,7 +608,6 @@ export function PtDetailPage() {
   const mySlot = useMemo(() => {
     if (role === 'TST') return 'TST' as const;
     if (role === 'SUPERVISOR') return 'SUPERVISOR' as const;
-    if (role === 'MANAGER') return 'MANAGER' as const;
     return null;
   }, [role]);
 
@@ -463,9 +627,25 @@ export function PtDetailPage() {
     void load();
   }, [token, id]);
 
-  async function decide(decision: 'APPROVE' | 'REJECT', slot: 'TST' | 'SUPERVISOR' | 'MANAGER') {
-    if (decision === 'REJECT' && !rejectReason.trim()) {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('print') === '1' && id) {
+      void api<Row>(`/pts/${id}/print-bundle`, { token })
+        .then((b) => {
+          setBundle(b);
+          setTimeout(() => window.print(), 400);
+        })
+        .catch(() => undefined);
+    }
+  }, [id, token]);
+
+  async function decide(decision: 'APPROVED' | 'REJECTED', slot: 'TST' | 'SUPERVISOR') {
+    if (decision === 'REJECTED' && !rejectReason.trim()) {
       setError('Informe o motivo da reprovação.');
+      return;
+    }
+    if (!/^\d{6}$/.test(pin)) {
+      setError('Informe o PIN de assinatura com 6 dígitos.');
       return;
     }
     try {
@@ -473,9 +653,15 @@ export function PtDetailPage() {
       await api(`/pts/${id}/approvals`, {
         method: 'POST',
         token,
-        body: JSON.stringify({ slot, decision, reason: rejectReason || undefined, pin }),
+        body: JSON.stringify({
+          slot,
+          decision,
+          reason: rejectReason || undefined,
+          pin,
+          expectedVersionId: pt?.current_version_id,
+        }),
       });
-      setMsg(decision === 'APPROVE' ? `Slot ${slot} aprovado` : `Slot ${slot} reprovado`);
+      setMsg(decision === 'APPROVED' ? `Slot ${roleLabel(slot)} aprovado com assinatura` : `Slot ${roleLabel(slot)} reprovado`);
       setRejectReason('');
       setActiveSlot(null);
       await load();
@@ -484,19 +670,51 @@ export function PtDetailPage() {
     }
   }
 
+  async function doCheckin() {
+    try {
+      await api(`/pts/${id}/checkin`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ pin: checkinPin }),
+      });
+      setMsg('Check-in realizado com assinatura digital');
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha no check-in');
+    }
+  }
+
+  async function printBundle() {
+    try {
+      const b = await api<Row>(`/pts/${id}/print-bundle`, { token });
+      setBundle(b);
+      setTimeout(() => window.print(), 300);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'PT ainda não autorizada para impressão');
+    }
+  }
+
   if (!pt && !error) return <p className="muted">Carregando PT…</p>;
 
   const approvals = Array.isArray(pt?.approvals) ? (pt!.approvals as Row[]) : [];
+  const checkins = Array.isArray(pt?.checkins) ? (pt!.checkins as Row[]) : [];
+  const natures = (pt?.natures as Record<string, string>) ?? {};
+  const answers = (pt?.answers as Record<string, unknown>) ?? {};
 
   return (
     <>
       <PageHead
-        title={`PT ${fieldOf(pt ?? {}, 'number', 'pt_number', 'os')}`}
-        subtitle={fieldOf(pt ?? {}, 'description', 'title')}
+        title={`PT ${fieldOf(pt ?? {}, 'number', 'pt_number', 'os_number', 'os')}`}
+        subtitle={String(answers.description ?? fieldOf(pt ?? {}, 'description', 'title'))}
         actions={
-          <Link className="btn btn-ghost" to="/pts">
-            Voltar
-          </Link>
+          <>
+            <button className="btn btn-primary" type="button" onClick={() => void printBundle()}>
+              Imprimir PT + APR
+            </button>
+            <Link className="btn btn-ghost" to="/pts">
+              Voltar
+            </Link>
+          </>
         }
       />
       <Err error={error} />
@@ -508,56 +726,107 @@ export function PtDetailPage() {
           <b style={{ fontSize: 18 }}>{fieldOf(pt ?? {}, 'status')}</b>
         </div>
         <div className="card kpi">
-          <label>Natureza</label>
-          <b style={{ fontSize: 18 }}>{fieldOf(pt ?? {}, 'nature', 'activity_nature')}</b>
-        </div>
-        <div className="card kpi">
           <label>OS</label>
-          <b style={{ fontSize: 18 }}>{fieldOf(pt ?? {}, 'os', 'work_order')}</b>
+          <b style={{ fontSize: 18 }}>{fieldOf(pt ?? {}, 'os', 'os_number')}</b>
         </div>
         <div className="card kpi">
           <label>Emissor</label>
           <b style={{ fontSize: 16 }}>{fieldOf(pt ?? {}, 'issuerName', 'issuer_name', 'created_by')}</b>
         </div>
+        <div className="card kpi">
+          <label>Check-ins</label>
+          <b style={{ fontSize: 18 }}>{checkins.length}</b>
+        </div>
       </div>
 
       <div className="card" style={{ marginBottom: 12 }}>
-        <h3 style={{ marginTop: 0 }}>Detalhes</h3>
-        <p>
-          <b>Perigos:</b>{' '}
-          {Array.isArray(pt?.hazards) ? (pt!.hazards as string[]).join('; ') : fieldOf(pt ?? {}, 'hazards')}
-        </p>
-        <p>
-          <b>Equipamentos:</b>{' '}
-          {Array.isArray(pt?.equipmentTags)
-            ? (pt!.equipmentTags as string[]).join(', ')
-            : fieldOf(pt ?? {}, 'equipment_tags')}
-        </p>
+        <h3 style={{ marginTop: 0 }}>Naturezas</h3>
+        <div className="nature-grid">
+          {ACTIVITY_NATURES.map((n) => (
+            <div key={n.code} className="nature-row">
+              <b>{n.label}</b>
+              <span className="badge">
+                {natures[n.code] === 'APPLICABLE' ? 'Aplicável' : 'Não aplicável'}
+              </span>
+              {(answers.naturesLockedFromApr as string[] | undefined)?.includes(n.code) ? (
+                <span className="muted">APR</span>
+              ) : (
+                <span />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <h3 style={{ marginTop: 0 }}>Assinaturas digitais</h3>
+        {approvals.length === 0 && checkins.length === 0 ? (
+          <p className="muted">Ainda sem assinaturas formais.</p>
+        ) : (
+          <>
+            {approvals.map((a) => (
+              <div key={fieldOf(a, 'id')} className="signature-box" style={{ marginBottom: 8 }}>
+                <b>{roleLabel(fieldOf(a, 'slot'))}</b> — {fieldOf(a, 'signer_name')} ·{' '}
+                {fieldOf(a, 'decision')} · {fieldOf(a, 'signed_at')}
+                <div className="muted">Hash: {String(fieldOf(a, 'document_hash')).slice(0, 16)}…</div>
+              </div>
+            ))}
+            {checkins.map((c) => (
+              <div key={fieldOf(c, 'id')} className="signature-box" style={{ marginBottom: 8 }}>
+                <b>Check-in Técnico</b> — {fieldOf(c, 'full_name')} · {fieldOf(c, 'checked_in_at')}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {role === 'TECHNICIAN' && ['APPROVED', 'IN_EXECUTION'].includes(fieldOf(pt ?? {}, 'status')) ? (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <h3 style={{ marginTop: 0 }}>Check-in na atividade</h3>
+          <p className="muted">Confirma participação e gera assinatura digital no documento.</p>
+          <div style={{ display: 'flex', gap: 8, maxWidth: 360 }}>
+            <input
+              className="field"
+              placeholder="PIN de assinatura"
+              value={checkinPin}
+              onChange={(e) => setCheckinPin(e.target.value)}
+            />
+            <CriticalActionButton type="button" onClick={() => void doCheckin()}>
+              Check-in
+            </CriticalActionButton>
+          </div>
+        </div>
+      ) : null}
 
       {canApprove ? (
         <div className="card" style={{ marginBottom: 12 }}>
           <h3 style={{ marginTop: 0 }}>Painel de aprovação</h3>
-          <p className="muted">Cada papel age no próprio slot. Gestor pode atuar nos slots permitidos.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            {(['TST', 'SUPERVISOR', 'MANAGER'] as const).map((slot) => {
+          <p className="muted">
+            Cada papel age no próprio slot com PIN. Gestor pode atuar nos slots TST e Supervisor.
+          </p>
+          <div style={{ marginBottom: 8, maxWidth: 200 }}>
+            <label className="muted">PIN de assinatura</label>
+            <input className="field" value={pin} onChange={(e) => setPin(e.target.value)} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {(['TST', 'SUPERVISOR'] as const).map((slot) => {
               const existing = approvals.find(
                 (a) => fieldOf(a, 'slot', 'role') === slot || fieldOf(a, 'slot') === slot,
               );
               const canAct =
-                mySlot === slot || (role === 'MANAGER' && (slot === 'TST' || slot === 'SUPERVISOR' || slot === 'MANAGER'));
+                mySlot === slot || role === 'MANAGER';
               return (
-                <div key={slot} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
-                  <b>Slot {slot}</b>
+                <div key={slot} style={{ border: '1px solid #dce8e2', borderRadius: 10, padding: 12 }}>
+                  <b>Slot {roleLabel(slot)}</b>
                   <div className="muted" style={{ margin: '6px 0' }}>
                     {existing
-                      ? `${fieldOf(existing, 'decision', 'status')} — ${fieldOf(existing, 'decidedAt', 'decided_at')}`
+                      ? `${fieldOf(existing, 'decision', 'status')} — ${fieldOf(existing, 'signer_name')} — ${fieldOf(existing, 'signed_at', 'decided_at')}`
                       : 'Pendente'}
                   </div>
                   {canAct && !existing ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <CriticalActionButton type="button" onClick={() => void decide('APPROVE', slot)}>
-                        Aprovar
+                      <CriticalActionButton type="button" onClick={() => void decide('APPROVED', slot)}>
+                        Aprovar e assinar
                       </CriticalActionButton>
                       <button
                         type="button"
@@ -575,7 +844,7 @@ export function PtDetailPage() {
 
           {activeSlot ? (
             <div style={{ marginTop: 12 }}>
-              <label className="muted">Motivo da reprovação ({activeSlot})</label>
+              <label className="muted">Motivo da reprovação ({roleLabel(activeSlot)})</label>
               <textarea
                 className="field"
                 rows={2}
@@ -583,19 +852,20 @@ export function PtDetailPage() {
                 onChange={(e) => setRejectReason(e.target.value)}
               />
               <div style={{ height: 8 }} />
-              <input
-                className="field"
-                placeholder="PIN (se exigido)"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                style={{ maxWidth: 200 }}
-              />
-              <div style={{ height: 8 }} />
-              <CriticalActionButton type="button" onClick={() => void decide('REJECT', activeSlot)}>
+              <CriticalActionButton type="button" onClick={() => void decide('REJECTED', activeSlot)}>
                 Confirmar reprovação
               </CriticalActionButton>
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {bundle ? (
+        <div className="card" id="print-area">
+          <h2>Documento impresso — PT + APR</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>
+            {JSON.stringify(bundle, null, 2)}
+          </pre>
         </div>
       ) : null}
     </>

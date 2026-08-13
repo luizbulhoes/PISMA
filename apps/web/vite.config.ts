@@ -11,8 +11,8 @@ export default defineConfig({
         name: 'PISMA',
         short_name: 'PISMA',
         description: 'Plataforma Integrada de Segurança e Meio Ambiente',
-        theme_color: '#0F2744',
-        background_color: '#F8FAFC',
+        theme_color: '#0d3b2e',
+        background_color: '#f3f8f5',
         display: 'standalone',
         start_url: '/',
         icons: [
