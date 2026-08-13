@@ -16,7 +16,7 @@ Registro de ambiguidades e melhorias propostas. **Não implementar itens pendent
 | DR-08 | Melhoria | Redis obrigatório desde Onda 0 (sessões + fila PDF/jobs) | AGUARDA APROVAÇÃO |
 | DR-09 | Melhoria | MinIO como storage padrão (mesmo em single-node) | AGUARDA APROVAÇÃO |
 | DR-10 | Melhoria | OpenTelemetry desde Onda 0 (traces + métricas) | AGUARDA APROVAÇÃO |
-| DR-11 | Melhoria | Feature flags por Obra via tabela `contract_features` desde Onda 0 | AGUARDA APROVAÇÃO |
+| DR-11 | Melhoria | Feature flags por Obra via tabela `contract_features` desde Onda 0 | **ADOTADO** (schema Onda 0) |
 | DR-12 | Fora de escopo | Metodologias extras RA/RQA (`04_FUTURE_NOT_IMPLEMENTED`) | **NÃO IMPLEMENTAR** |
 | DR-13 | Infra | Docker Desktop ausente no ambiente de desenvolvimento | PENDENTE (Compose pronto; fallback local documentado) |
 

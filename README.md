@@ -88,9 +88,11 @@ PIN de assinatura seed: `135790`
 
 0 Fundação · 1 Pessoas · 2 Ativos/Docs · 3 APR/PGR/PT · 4 Audicamp/PAC/Inspeções · 5 RA/RQA · 6 PREA/Resíduos · 7 Dashboards/PWA · 8 Hardening
 
-Operação: `docs/OPERATIONS.md` · Segurança: `docs/SECURITY_CHECKLIST.md` · Decisões: `docs/DECISION_REQUIRED.md`
+Operação: `docs/OPERATIONS.md` · Segurança: `docs/SECURITY_CHECKLIST.md` · Decisões: `docs/DECISION_REQUIRED.md` · Memória de melhorias: `memory.md`
 
 Smoke: `pnpm --filter @pisma/api exec tsx test/smoke.e2e.ts`
+
+**GitHub (manter atualizado):** https://github.com/luizbulhoes/PISMA
 
 ## Decisões pendentes
 
