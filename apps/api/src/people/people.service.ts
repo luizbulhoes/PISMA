@@ -120,7 +120,9 @@ export class PeopleService {
 
   async listTechnicians(actor: AuthUser) {
     const workId = this.assertSameWork(actor);
-    this.assertSstOrManager(actor);
+    if (!['TST', 'MANAGER', 'MASTER', 'TECHNICIAN', 'SUPERVISOR'].includes(actor.role ?? '')) {
+      throw new ForbiddenException();
+    }
     const alertDaysRes = await this.db.query<{ alert_days_before_expiry: number }>(
       `SELECT alert_days_before_expiry FROM works WHERE id = $1`,
       [workId],

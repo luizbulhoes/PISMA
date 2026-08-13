@@ -3,21 +3,16 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { ACTIVITY_NATURES, defaultNaturesMap, roleLabel, type NatureFill } from '../labels';
+import {
+  GENERAL_PRECAUTIONS,
+  NATURE_MODULES,
+  emptyNatureAnswers,
+  type ChecklistAnswer,
+} from '../natureModules';
 import { CriticalActionButton } from '../offline';
 import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
 type Row = Record<string, unknown>;
-
-const PRECAUTIONS = [
-  'EPI adequado disponível e em uso',
-  'Área isolada / sinalizada',
-  'Energia zero / LOTO aplicado',
-  'Andaime / plataforma inspecionada',
-  'Espaço confinado — permissão específica',
-  'Trabalho a quente — extintor próximo',
-  'Proteção contra queda instalada',
-  'Condições climáticas adequadas',
-];
 
 function natureLabel(code: string) {
   return ACTIVITY_NATURES.find((n) => n.code === code)?.label ?? code;
@@ -189,8 +184,11 @@ export function PtNewPage() {
     locationId: '',
     aprId: '',
     natures: defaultNaturesMap() as Record<string, NatureFill>,
+    natureChecklists: {} as Record<string, Record<string, ChecklistAnswer>>,
     hazards: '',
-    precautions: Object.fromEntries(PRECAUTIONS.map((p) => [p, 'NA' as 'YES' | 'NO' | 'NA'])),
+    precautions: Object.fromEntries(
+      GENERAL_PRECAUTIONS.map((p) => [p, '' as ChecklistAnswer]),
+    ),
     equipmentTags: [] as string[],
     teamUserIds: [] as string[],
     authorizeSignature: false,
@@ -255,7 +253,19 @@ export function PtNewPage() {
 
   function setNature(code: string, fill: NatureFill) {
     if (lockedNatures.includes(code) && fill !== 'APPLICABLE') return;
-    setForm((f) => ({ ...f, natures: { ...f.natures, [code]: fill } }));
+    setForm((f) => {
+      const natureChecklists = { ...f.natureChecklists };
+      if (fill === 'APPLICABLE') {
+        natureChecklists[code] = natureChecklists[code] ?? emptyNatureAnswers(code);
+      } else {
+        delete natureChecklists[code];
+      }
+      return {
+        ...f,
+        natures: { ...f.natures, [code]: fill },
+        natureChecklists,
+      };
+    });
   }
 
   function toggleTag(tag: string) {
@@ -293,6 +303,7 @@ export function PtNewPage() {
           locationId: form.locationId || undefined,
           aprId: form.aprId || undefined,
           natures: form.natures,
+          natureChecklists: form.natureChecklists,
           hazards: form.hazards.split('\n').filter(Boolean),
           precautions: form.precautions,
           equipmentTags: form.equipmentTags,
@@ -397,42 +408,80 @@ export function PtNewPage() {
         {step === 1 ? (
           <>
             <p>
-              Um mesmo serviço pode exigir várias naturezas. Marque cada uma como{' '}
-              <b>Aplicável</b> ou <b>Não aplicável</b>. Itens N/A ficam indisponíveis para
-              preenchimento detalhado.
+              Selecione a aplicabilidade de cada natureza (FS 13-01). Em{' '}
+              <b>Não aplicável</b>, o checklist fica oculto. Em <b>Aplicável</b>, abrem-se as
+              marcações Sim / Não / N/A.
             </p>
             <div className="nature-grid">
               {ACTIVITY_NATURES.map((n) => {
                 const locked = lockedNatures.includes(n.code);
                 const fill = form.natures[n.code];
+                const mod = NATURE_MODULES[n.code];
                 return (
-                  <div key={n.code} className={`nature-row${locked ? ' locked' : ''}`}>
-                    <div>
-                      <b>{n.label}</b>
-                      {locked ? (
-                        <div className="muted">Definido pela APR — não alterável</div>
-                      ) : null}
+                  <div key={n.code} className={`nature-row${locked ? ' locked' : ''}`} style={{ display: 'block' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 10, alignItems: 'center' }}>
+                      <div>
+                        <b>{n.label}</b>
+                        {locked ? (
+                          <div className="muted">Definido pela APR — não alterável</div>
+                        ) : null}
+                      </div>
+                      <label>
+                        <input
+                          type="radio"
+                          name={`nat-${n.code}`}
+                          checked={fill === 'APPLICABLE'}
+                          disabled={locked}
+                          onChange={() => setNature(n.code, 'APPLICABLE')}
+                        />{' '}
+                        Aplicável
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name={`nat-${n.code}`}
+                          checked={fill === 'NA'}
+                          disabled={locked}
+                          onChange={() => setNature(n.code, 'NA')}
+                        />{' '}
+                        Não aplicável
+                      </label>
                     </div>
-                    <label>
-                      <input
-                        type="radio"
-                        name={`nat-${n.code}`}
-                        checked={fill === 'APPLICABLE'}
-                        disabled={locked}
-                        onChange={() => setNature(n.code, 'APPLICABLE')}
-                      />{' '}
-                      Aplicável
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name={`nat-${n.code}`}
-                        checked={fill === 'NA'}
-                        disabled={locked}
-                        onChange={() => setNature(n.code, 'NA')}
-                      />{' '}
-                      Não aplicável
-                    </label>
+                    {fill === 'APPLICABLE' && mod ? (
+                      <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #dce8e2' }}>
+                        <b className="muted">Precauções — {mod.label}</b>
+                        {mod.items.map((item) => (
+                          <div
+                            key={item}
+                            style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}
+                          >
+                            <span style={{ flex: 1, minWidth: 220 }}>{item}</span>
+                            {(['YES', 'NO', 'NA'] as const).map((v) => (
+                              <label key={v} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <input
+                                  type="radio"
+                                  name={`${n.code}-${item}`}
+                                  checked={(form.natureChecklists[n.code]?.[item] ?? '') === v}
+                                  onChange={() =>
+                                    setForm({
+                                      ...form,
+                                      natureChecklists: {
+                                        ...form.natureChecklists,
+                                        [n.code]: {
+                                          ...(form.natureChecklists[n.code] ?? emptyNatureAnswers(n.code)),
+                                          [item]: v,
+                                        },
+                                      },
+                                    })
+                                  }
+                                />
+                                {v === 'YES' ? 'Sim' : v === 'NO' ? 'Não' : 'N/A'}
+                              </label>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -450,8 +499,8 @@ export function PtNewPage() {
               onChange={(e) => setForm({ ...form, hazards: e.target.value })}
             />
             <div style={{ height: 12 }} />
-            <b>Precauções — naturezas aplicáveis: {applicable.map((n) => n.label).join(', ') || 'nenhuma'}</b>
-            {PRECAUTIONS.map((p) => (
+            <b>Precauções obrigatórias para qualquer natureza</b>
+            {GENERAL_PRECAUTIONS.map((p) => (
               <div
                 key={p}
                 style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}
@@ -504,24 +553,29 @@ export function PtNewPage() {
           <>
             <b>Incluir técnicos na atividade</b>
             <p className="muted">
-              Os técnicos incluídos receberão a PT e deverão fazer check-in com assinatura digital.
+              Os técnicos incluídos receberão a PT, poderão visualizá-la sem alterar, farão check-in
+              e assinarão confirmando participação.
             </p>
             <div style={{ marginTop: 8 }}>
-              {technicians
-                .filter((t) => fieldOf(t, 'id') !== user.id)
-                .map((t) => {
-                  const id = fieldOf(t, 'id');
-                  return (
-                    <label key={id} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                      <input
-                        type="checkbox"
-                        checked={form.teamUserIds.includes(id)}
-                        onChange={() => toggleTeam(id)}
-                      />
-                      {fieldOf(t, 'full_name', 'fullName', 'name')}
-                    </label>
-                  );
-                })}
+              {technicians.filter((t) => fieldOf(t, 'id') !== user.id).length === 0 ? (
+                <p className="muted">Nenhum outro técnico disponível nesta Obra.</p>
+              ) : (
+                technicians
+                  .filter((t) => fieldOf(t, 'id') !== user.id)
+                  .map((t) => {
+                    const id = fieldOf(t, 'id');
+                    return (
+                      <label key={id} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={form.teamUserIds.includes(id)}
+                          onChange={() => toggleTeam(id)}
+                        />
+                        {fieldOf(t, 'full_name', 'fullName', 'name')}
+                      </label>
+                    );
+                  })
+              )}
             </div>
             <div className="signature-box" style={{ marginTop: 16 }}>
               <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -534,7 +588,7 @@ export function PtNewPage() {
                   <b>Autorizo a assinatura digital desta PT</b>
                   <div className="muted">
                     Confirmo a emissão deste documento com a minha assinatura digital já vinculada
-                    à minha conta. TST e Supervisor/Gestor assinarão na aprovação.
+                    à minha conta.
                   </div>
                 </span>
               </label>
@@ -551,19 +605,36 @@ export function PtNewPage() {
               <b>Descrição:</b> {form.description}
             </p>
             <p>
-              <b>APR:</b> {form.aprId ? fieldOf(aprs.find((a) => fieldOf(a, 'id') === form.aprId) ?? {}, 'title', 'name') || form.aprId : '—'}
+              <b>APR:</b>{' '}
+              {form.aprId
+                ? fieldOf(aprs.find((a) => fieldOf(a, 'id') === form.aprId) ?? {}, 'title', 'name') ||
+                  form.aprId
+                : '—'}
             </p>
             <p>
               <b>Naturezas aplicáveis:</b>{' '}
               {applicable.map((n) => n.label).join(', ') || 'nenhuma'}
             </p>
             <p>
-              <b>Técnicos incluídos:</b> {form.teamUserIds.length}
+              <b>Técnicos incluídos:</b>{' '}
+              {form.teamUserIds.length === 0
+                ? 'nenhum'
+                : technicians
+                    .filter((t) => form.teamUserIds.includes(fieldOf(t, 'id')))
+                    .map((t) => fieldOf(t, 'full_name', 'fullName', 'name'))
+                    .join(', ')}
             </p>
             <p>
-              <b>Assinatura autorizada:</b> {form.authorizeSignature ? 'Sim' : 'Não'}
+              <b>Assinatura do emissor autorizada:</b> {form.authorizeSignature ? 'Sim' : 'Não'}
             </p>
-            <p className="muted">Ao confirmar, a PT será criada e submetida para aprovação.</p>
+            <div className="signature-box" style={{ marginTop: 12 }}>
+              <b>Observação</b>
+              <p className="muted" style={{ marginBottom: 0 }}>
+                Ao criar e submeter, a PT seguirá para análise e aprovação. TST e
+                Supervisor/Gestor assinarão na aprovação. Os técnicos incluídos farão check-in e
+                assinarão a participação após a autorização.
+              </p>
+            </div>
           </div>
         ) : null}
 

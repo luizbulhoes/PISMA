@@ -46,7 +46,7 @@ export class PeopleController {
   }
 
   @Get('technicians')
-  @Roles('TST', 'MANAGER', 'MASTER')
+  @Roles('TST', 'MANAGER', 'MASTER', 'TECHNICIAN', 'SUPERVISOR')
   listTechnicians(@Req() req: RequestWithUser) {
     return this.people.listTechnicians(req.user);
   }

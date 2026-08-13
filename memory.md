@@ -42,11 +42,13 @@ Remote: `https://github.com/luizbulhoes/PISMA.git`
 
 **Por quê:** alinhar o fluxo de campo do Técnico e a linguagem SSTA ao uso real em obra (múltiplas naturezas, APR como fonte de verdade, assinatura formal e cadastros mestres).
 
-### 2026-08-13 — Texto PT assinatura vs cadastro inicial
-- **Tipo:** correção de copy · **Status:** feito
-- Removida orientação de selfie/CPF/crachá do checkbox “Autorizo assinatura” na Nova PT (era cadastro, não emissão).
-- Cadastro inicial reforçado para **qualquer usuário**: selfie + CPF + crachá frente/verso para acesso e assinatura digital.
-- **Git:** push `main`
+### 2026-08-13 — Correção 500 PT + FS 13-01 + APR assinatura
+- **Tipo:** correção / melhoria · **Status:** feito
+- 500 em PT/print/get: `full_name` vinha de `users` — corrigido para `user_profiles`.
+- Técnico passa a listar pares em `/technicians` para incluir na PT.
+- Naturezas da PT com checklists FS 13-01: N/A oculta; Aplicável abre Sim/Não/N/A.
+- APR: técnico aprova/reprova com assinatura digital da sessão (sem PIN); impressão PDF.
+- Copy PT: observação de aprovação TST/Supervisor no passo 5.
 
 ---
 

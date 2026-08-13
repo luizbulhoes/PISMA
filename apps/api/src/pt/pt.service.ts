@@ -174,16 +174,20 @@ export class PtService {
     const answers = (current?.answers_jsonb as Record<string, unknown>) ?? {};
     const checkins = (
       await this.db.query(
-        `SELECT c.*, u.full_name, sc.visual_signature_file_id
+        `SELECT c.*, COALESCE(p.full_name, u.username) AS full_name, sc.visual_signature_file_id
          FROM pt_checkins c
          JOIN users u ON u.id = c.user_id
+         LEFT JOIN user_profiles p ON p.user_id = u.id
          LEFT JOIN signature_credentials sc ON sc.id = c.signature_credential_id
          WHERE c.pt_id = $1 ORDER BY c.checked_in_at`,
         [id],
       )
     ).rows;
     const issuer = await this.db.query<{ full_name: string }>(
-      `SELECT full_name FROM users WHERE id = $1`,
+      `SELECT COALESCE(p.full_name, u.username) AS full_name
+       FROM users u
+       LEFT JOIN user_profiles p ON p.user_id = u.id
+       WHERE u.id = $1`,
       [res.rows[0].created_by],
     );
     const approvalsEnriched = await Promise.all(
@@ -193,7 +197,10 @@ export class PtService {
           [a.signature_credential_id],
         );
         const signer = await this.db.query<{ full_name: string }>(
-          `SELECT full_name FROM users WHERE id = $1`,
+          `SELECT COALESCE(p.full_name, u.username) AS full_name
+           FROM users u
+           LEFT JOIN user_profiles p ON p.user_id = u.id
+           WHERE u.id = $1`,
           [a.signer_user_id],
         );
         return {

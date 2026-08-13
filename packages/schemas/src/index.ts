@@ -245,6 +245,7 @@ export const createPtSchema = z.preprocess((raw) => {
     answers: {
       description: b.description,
       natures: b.natures,
+      natureChecklists: b.natureChecklists,
       hazards: b.hazards,
       precautions: b.precautions,
       equipmentTags: b.equipmentTags,

@@ -187,7 +187,7 @@ export class RiskService {
     user: AuthUser,
     id: string,
     slot: string,
-    pin: string,
+    pin: string | undefined,
     decision: 'APPROVED' | 'REJECTED' = 'APPROVED',
   ) {
     const allowed = [
@@ -214,8 +214,16 @@ export class RiskService {
       [user.userId],
     );
     if (!cred.rowCount) throw new ForbiddenException('Credencial de assinatura ausente');
-    const pinOk = await verifyPin(pin, cred.rows[0].pin_hash);
-    if (!pinOk) throw new ForbiddenException('PIN inválido');
+    // Técnico aplica assinatura digital da sessão (sem PIN na UI).
+    // Gestor mantém confirmação por PIN.
+    if (slot === 'MANAGER' || user.role === 'MANAGER' || user.role === 'MASTER') {
+      if (!pin || !(await verifyPin(pin, cred.rows[0].pin_hash))) {
+        throw new ForbiddenException('PIN inválido');
+      }
+    } else if (pin) {
+      const pinOk = await verifyPin(pin, cred.rows[0].pin_hash);
+      if (!pinOk) throw new ForbiddenException('PIN inválido');
+    }
     const hash = createHash('sha256')
       .update(JSON.stringify(analysis.versions?.at?.(-1)?.content_jsonb ?? id))
       .digest('hex');
@@ -258,9 +266,10 @@ export class RiskService {
   async listApprovals(user: AuthUser, id: string) {
     await this.getAnalysis(user, id);
     const res = await this.db.query(
-      `SELECT a.*, u.full_name AS signer_name
+      `SELECT a.*, COALESCE(p.full_name, u.username) AS signer_name
        FROM risk_analysis_approvals a
        JOIN users u ON u.id = a.signer_user_id
+       LEFT JOIN user_profiles p ON p.user_id = u.id
        WHERE a.risk_analysis_id = $1 ORDER BY a.signed_at`,
       [id],
     );

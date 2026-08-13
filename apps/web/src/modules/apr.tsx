@@ -8,16 +8,15 @@ import { Err, Msg, PageHead, emptyItems, fieldOf } from './shared';
 
 type Apr = Record<string, unknown>;
 
-const APR_TECH_SLOTS = ['TECHNICIAN_1', 'TECHNICIAN_2', 'TECHNICIAN_3', 'TECHNICIAN_4'] as const;
-
 export function AprPage() {
   const { token, user } = useAuth();
   const [items, setItems] = useState<Apr[]>([]);
   const [locations, setLocations] = useState<Apr[]>([]);
   const [technicians, setTechnicians] = useState<Apr[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [pin, setPin] = useState('');
+  const [managerPin, setManagerPin] = useState('');
   const [form, setForm] = useState({
     title: '',
     activity: '',
@@ -28,12 +27,14 @@ export function AprPage() {
     technicianApproverIds: [] as string[],
   });
   const canCreate = ['TST', 'SUPERVISOR', 'MANAGER', 'MASTER'].includes(user?.role ?? '');
+  const isTechnician = user?.role === 'TECHNICIAN';
 
   async function load() {
     try {
       setError(null);
       const r = await api<unknown>('/apr', { token });
-      setItems(emptyItems<Apr>(r));
+      const list = emptyItems<Apr>(r);
+      setItems(list);
       const l = await api<unknown>('/locations', { token }).catch(() => ({ items: [] }));
       setLocations(emptyItems<Apr>(l));
       const t = await api<unknown>('/technicians', { token }).catch(() => ({ items: [] }));
@@ -47,6 +48,11 @@ export function AprPage() {
   useEffect(() => {
     void load();
   }, [token]);
+
+  const selected = useMemo(
+    () => items.find((a) => fieldOf(a, 'id') === selectedId) ?? null,
+    [items, selectedId],
+  );
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -82,18 +88,52 @@ export function AprPage() {
     }
   }
 
-  async function approveSlot(aprId: string, slot: string) {
+  async function decideApr(aprId: string, decision: 'APPROVED' | 'REJECTED') {
     try {
+      const slot = isTechnician ? 'TECHNICIAN_1' : 'MANAGER';
       await api(`/apr/${aprId}/approvals`, {
         method: 'POST',
         token,
-        body: JSON.stringify({ slot, pin, decision: 'APPROVED' }),
+        body: JSON.stringify({
+          slot,
+          decision,
+          pin: isTechnician ? undefined : managerPin,
+        }),
       });
-      setMsg(`Aprovação ${slot} registrada`);
+      setMsg(
+        decision === 'APPROVED'
+          ? 'APR aprovada com assinatura digital'
+          : 'APR reprovada com registro de assinatura',
+      );
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha na aprovação da APR');
+      setError(err instanceof Error ? err.message : 'Falha na decisão da APR');
     }
+  }
+
+  async function printApr(aprId: string) {
+    const apr = items.find((a) => fieldOf(a, 'id') === aprId);
+    if (!apr) return;
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const content = (apr.content as Record<string, unknown>) ?? {};
+    const natures = (content.natures as Record<string, string>) ?? {};
+    const applicable = Object.entries(natures)
+      .filter(([, v]) => v === 'APPLICABLE')
+      .map(([k]) => ACTIVITY_NATURES.find((n) => n.code === k)?.label ?? k)
+      .join(', ');
+    w.document.write(`<!doctype html><html><head><title>APR ${fieldOf(apr, 'title')}</title>
+      <style>body{font-family:Segoe UI,sans-serif;padding:24px;color:#0d3b2e}
+      h1{margin:0 0 8px}.muted{color:#5a6f67}.box{border:1px solid #dce8e2;padding:12px;border-radius:8px;margin-top:12px}</style>
+      </head><body>
+      <h1>APR — ${fieldOf(apr, 'title')}</h1>
+      <div class="muted">Atividade: ${fieldOf(apr, 'activity')} · Status: ${fieldOf(apr, 'status')}</div>
+      <div class="box"><b>Naturezas aplicáveis</b><div>${applicable || '—'}</div></div>
+      <div class="box"><b>Perigos</b><pre>${JSON.stringify(content.hazards ?? [], null, 2)}</pre></div>
+      <div class="box"><b>Controles</b><pre>${JSON.stringify(content.controls ?? [], null, 2)}</pre></div>
+      <div class="box"><b>Assinaturas digitais</b><div class="muted">Registradas no sistema com credencial do usuário, data/hora e trilha de auditoria.</div></div>
+      <script>window.print()</script></body></html>`);
+    w.document.close();
   }
 
   const title = useMemo(
@@ -144,7 +184,7 @@ export function AprPage() {
           </div>
           <div style={{ height: 12 }} />
           <b>Condições de natureza do local</b>
-          <p className="muted">Itens marcados como Aplicável serão automarcados e travados nas PTs vinculadas.</p>
+          <p className="muted">Itens Aplicável serão automarcados e travados nas PTs vinculadas.</p>
           <div className="nature-grid">
             {ACTIVITY_NATURES.map((n) => (
               <div key={n.code} className="nature-row">
@@ -197,7 +237,8 @@ export function AprPage() {
             onChange={(e) => setForm({ ...form, controls: e.target.value })}
           />
           <div style={{ height: 12 }} />
-          <b>Técnicos para aprovação (até 4) + Gestor</b>
+          <b>Técnicos convidados a aprovar (até 4)</b>
+          <p className="muted">Eles lerão a APR e aprovarão/reprovarão com assinatura digital.</p>
           <div style={{ marginTop: 8 }}>
             {technicians.slice(0, 12).map((t) => {
               const id = fieldOf(t, 'id');
@@ -228,7 +269,8 @@ export function AprPage() {
       ) : (
         <div className="card" style={{ marginBottom: 12 }}>
           <p className="muted">
-            Técnico não cadastra APR. Consulte as APRs existentes e vincule na Nova PT.
+            Técnico não cadastra APR. Abra uma APR, leia o conteúdo e aprove ou reprove com sua
+            assinatura digital.
           </p>
         </div>
       )}
@@ -241,7 +283,7 @@ export function AprPage() {
               <th align="left">Atividade</th>
               <th align="left">Naturezas</th>
               <th align="left">Status</th>
-              <th align="left">Aprovar</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -268,34 +310,13 @@ export function AprPage() {
                       <span className="badge">{fieldOf(a, 'status')}</span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <input
-                          className="field"
-                          placeholder="PIN"
-                          value={pin}
-                          onChange={(e) => setPin(e.target.value)}
-                          style={{ width: 90 }}
-                        />
-                        {user?.role === 'TECHNICIAN'
-                          ? APR_TECH_SLOTS.map((slot) => (
-                              <CriticalActionButton
-                                key={slot}
-                                type="button"
-                                onClick={() => void approveSlot(fieldOf(a, 'id'), slot)}
-                              >
-                                Tec {slot.slice(-1)}
-                              </CriticalActionButton>
-                            ))
-                          : null}
-                        {['MANAGER', 'MASTER'].includes(user?.role ?? '') ? (
-                          <CriticalActionButton
-                            type="button"
-                            onClick={() => void approveSlot(fieldOf(a, 'id'), 'MANAGER')}
-                          >
-                            {roleLabel('MANAGER')}
-                          </CriticalActionButton>
-                        ) : null}
-                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => setSelectedId(fieldOf(a, 'id'))}
+                      >
+                        Abrir
+                      </button>
                     </td>
                   </tr>
                 );
@@ -304,6 +325,95 @@ export function AprPage() {
           </tbody>
         </table>
       </div>
+
+      {selected ? (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <h3 style={{ marginTop: 0 }}>{fieldOf(selected, 'title')}</h3>
+          <p className="muted">
+            {fieldOf(selected, 'activity')} · {fieldOf(selected, 'status')}
+          </p>
+          <div style={{ marginBottom: 8 }}>
+            <b>Perigos</b>
+            <pre style={{ whiteSpace: 'pre-wrap' }}>
+              {JSON.stringify(((selected.content as Record<string, unknown>)?.hazards as unknown) ?? [], null, 2)}
+            </pre>
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <b>Controles</b>
+            <pre style={{ whiteSpace: 'pre-wrap' }}>
+              {JSON.stringify(((selected.content as Record<string, unknown>)?.controls as unknown) ?? [], null, 2)}
+            </pre>
+          </div>
+
+          {isTechnician ? (
+            <div className="signature-box">
+              <p style={{ marginTop: 0 }}>
+                Após ler a APR, registre sua decisão com a <b>assinatura digital</b> da sua conta
+                (sem PIN nesta etapa).
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <CriticalActionButton
+                  type="button"
+                  onClick={() => void decideApr(fieldOf(selected, 'id'), 'APPROVED')}
+                >
+                  Aprovar e assinar
+                </CriticalActionButton>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => void decideApr(fieldOf(selected, 'id'), 'REJECTED')}
+                >
+                  Reprovar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => void printApr(fieldOf(selected, 'id'))}
+                >
+                  Imprimir APR PDF
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {['MANAGER', 'MASTER'].includes(user?.role ?? '') ? (
+            <div className="signature-box" style={{ marginTop: 12 }}>
+              <label className="muted">PIN do Gestor</label>
+              <input
+                className="field"
+                value={managerPin}
+                onChange={(e) => setManagerPin(e.target.value)}
+                style={{ maxWidth: 160, marginBottom: 8 }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <CriticalActionButton
+                  type="button"
+                  onClick={() => void decideApr(fieldOf(selected, 'id'), 'APPROVED')}
+                >
+                  Aprovar como {roleLabel('MANAGER')}
+                </CriticalActionButton>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => void printApr(fieldOf(selected, 'id'))}
+                >
+                  Imprimir APR PDF
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {!isTechnician && !['MANAGER', 'MASTER'].includes(user?.role ?? '') ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void printApr(fieldOf(selected, 'id'))}
+            >
+              Imprimir APR PDF
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="card">
         <Link className="btn btn-ghost" to="/pts/nova">
