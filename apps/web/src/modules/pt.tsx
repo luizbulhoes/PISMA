@@ -533,8 +533,8 @@ export function PtNewPage() {
                 <span>
                   <b>Autorizo a assinatura digital desta PT</b>
                   <div className="muted">
-                    Usa a assinatura cadastrada no primeiro acesso (selfie, CPF e crachá). TST e
-                    Gestor/Supervisor também assinarão na autorização.
+                    Confirmo a emissão deste documento com a minha assinatura digital já vinculada
+                    à minha conta. TST e Supervisor/Gestor assinarão na aprovação.
                   </div>
                 </span>
               </label>

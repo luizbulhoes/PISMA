@@ -154,7 +154,10 @@ export function FirstAccessPage() {
     <div className="login-wrap">
       <form className="card login-card" onSubmit={next} style={{ width: 'min(560px, 100%)' }}>
         <h1 style={{ marginTop: 0 }}>Ativação de conta</h1>
-        <p className="muted">Etapa {step} de 6 — nenhuma outra função até concluir</p>
+        <p className="muted">
+          Etapa {step} de 6 — obrigatório para qualquer usuário obter acesso e assinatura digital.
+          Sem concluir, o sistema permanece bloqueado.
+        </p>
 
         {step === 1 && (
           <>
@@ -171,6 +174,10 @@ export function FirstAccessPage() {
 
         {step === 2 && (
           <>
+            <p className="muted" style={{ marginTop: 0 }}>
+              Informe seus dados cadastrais. O CPF é obrigatório e integra a identidade da
+              assinatura digital.
+            </p>
             {(['fullName', 'cpf', 'employeeNumber', 'jobFunction', 'employer'] as const).map((k) => (
               <div key={k} style={{ marginBottom: 8 }}>
                 <label className="muted">{PROFILE_FIELD_LABELS[k]}</label>
@@ -179,6 +186,8 @@ export function FirstAccessPage() {
                   value={String(profile[k])}
                   onChange={(e) => setProfile({ ...profile, [k]: e.target.value })}
                   required={k === 'cpf' || k === 'fullName'}
+                  inputMode={k === 'cpf' ? 'numeric' : undefined}
+                  placeholder={k === 'cpf' ? 'Somente números' : undefined}
                 />
               </div>
             ))}
@@ -239,10 +248,15 @@ export function FirstAccessPage() {
 
         {step === 6 && (
           <>
-            <p className="muted">
-              Identidade local: selfie + CPF já informado + foto frente e verso do crachá. Esses
-              dados vinculam a assinatura digital ao usuário.
+            <p>
+              Para concluir o registro inicial e ativar a assinatura digital, envie:
             </p>
+            <ul className="muted" style={{ marginTop: 8 }}>
+              <li>Selfie do titular da conta</li>
+              <li>CPF (já informado na etapa de dados)</li>
+              <li>Foto da frente do crachá</li>
+              <li>Foto do verso do crachá</li>
+            </ul>
             <label className="muted">Selfie</label>
             <input
               className="field"
@@ -253,7 +267,7 @@ export function FirstAccessPage() {
               onChange={(e) => setPhotos({ ...photos, selfie: e.target.files?.[0] ?? null })}
             />
             <div style={{ height: 8 }} />
-            <label className="muted">Crachá — frente</label>
+            <label className="muted">Foto frente do crachá</label>
             <input
               className="field"
               type="file"
@@ -262,7 +276,7 @@ export function FirstAccessPage() {
               onChange={(e) => setPhotos({ ...photos, badge_front: e.target.files?.[0] ?? null })}
             />
             <div style={{ height: 8 }} />
-            <label className="muted">Crachá — verso</label>
+            <label className="muted">Foto verso do crachá</label>
             <input
               className="field"
               type="file"

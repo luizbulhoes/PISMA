@@ -42,6 +42,12 @@ Remote: `https://github.com/luizbulhoes/PISMA.git`
 
 **Por quê:** alinhar o fluxo de campo do Técnico e a linguagem SSTA ao uso real em obra (múltiplas naturezas, APR como fonte de verdade, assinatura formal e cadastros mestres).
 
+### 2026-08-13 — Texto PT assinatura vs cadastro inicial
+- **Tipo:** correção de copy · **Status:** feito
+- Removida orientação de selfie/CPF/crachá do checkbox “Autorizo assinatura” na Nova PT (era cadastro, não emissão).
+- Cadastro inicial reforçado para **qualquer usuário**: selfie + CPF + crachá frente/verso para acesso e assinatura digital.
+- **Git:** push `main`
+
 ---
 
 ## Princípios não negociáveis (já implementados)
